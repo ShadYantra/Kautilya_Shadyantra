@@ -1,0 +1,18 @@
+{
+    "editor.suggestSelection": "first",
+    "vsintellicode.modify.editor.suggestSelection": "automaticallyOverrodeDefaultValue",
+    "open-php-html-js-in-browser.selectedBrowser": "Firefox",
+    "php.executablePath": "C:/Users/sshukla/Desktop/wamp/bin/php/php7.4.9/php.exe",
+    "php.validate.executablePath": "C:/Users/sshukla/Desktop/wamp/bin/php/php7.4.9/php.exe",
+    "phpTools.language": "en",
+    "liveServer.settings.useWebExt": true,
+    "intelephense.environment.shortOpenTag": true,
+    "html.format.templating": true,
+    "liveServer.settings.donotVerifyTags": true,
+    "liveServer.settings.donotShowInfoMsg": true,
+    "intelephense.environment.phpVersion": "7.4.9",
+    "phpserver.phpPath": "C:/Users/sshukla/Desktop/wamp/bin/php/php7.4.9/php.exe",
+    "runtimeExecutable": "C:/Users/sshukla/Desktop/wamp/bin/php/php7.4.9/php.exe",
+    "php-cs-fixer.executablePath": "${extensionPath}/php-cs-fixer.phar",
+    "php-cs-fixer.lastDownload": 1616042420324
+    }

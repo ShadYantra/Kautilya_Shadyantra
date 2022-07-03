@@ -1,0 +1,183 @@
+<!-- COPIED FROM https://phor.net/gadgets/fen2html/ -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <title>FEN2HTML</title>
+    <style>
+      table.chess { border: 1px solid black; margin: 2px; font-size: xx-large}
+      table.chess td { width: 1.5em; height: 1.5em; padding: 0; margin: 1em; vertical-align: middle; text-align: center }
+      table.chess tr td { background: #F2E0CB }
+      table.chess tr:nth-child(odd) td:nth-child(even), table.chess tr:nth-child(even) td:nth-child(odd)  { background: #C4AA8B }
+    </style>
+  </head>
+  <body class="my-5">
+    <div class="container">
+      <h1><abbr title="Forsyth-Edwards Notation">FEN</abbr> to HTML</h1>
+      <p class="lead">by <a href="http://fulldecent.blogspot.com">William Entriken</a></p>
+      <hr>
+      <h2>Input FEN</h2> 
+      <div class="input-group input-group-lg">
+        <input class="form-control" onKeyUp="fentohtml()" id="fen" value="1rnbqkbnr1/1pppppppp1/181/181/181/181/181/181/1PPPPPPPP1/1RNBQKBNR1 w KQkq - 0 1">
+      </div>
+      <hr>
+      <div class="row">
+        <div class="col-lg-6">       
+          <h2>Output View</h2> 
+          <div id="out"> 
+          </div>
+        </div>
+        <div class="col-lg-6">       
+          <h2>Output HTML (view source for CSS)</h2>
+          <pre id="outhtml"></pre>
+        </div>
+      </div>
+    </div> <!-- /container -->
+    <script> 
+      const pieces = {
+        K:"♔", Q:"♕", R:"♖", B:"♗", N:"♘", P:"♙", 
+        k:"♚", q:"♛", r:"♜", b:"♝", n:"♞", p:"♟",
+      }
+	 function ord(str){return str.charCodeAt(0);}
+
+	  function fentohtml() {
+		htmldata=document.getElementById("fen").value.trim();
+		//1rnbqkbnr1/1pppppppp1/181/181/181/181/1PPPPPPPP1/1RNBQKBNR1 w0 () - 0 1
+		
+		var htmlgrid=htmldata.split("/",100);
+		var tdata="";
+		var mover=htmlgrid[htmlgrid.length-1].split(" ")[1];
+		mover=mover.split(" ")[0];
+		htmlgrid[htmlgrid.length-1]=htmlgrid[htmlgrid.length-1].split(" ")[0];
+		console.log (htmlgrid);
+		var movername="white;
+		var moverid="1";
+		var moverstatus="white";
+
+		if(mover=="wo"){
+			movername="white;
+			moverid="1";
+			moverstatus="white";
+		}
+		else if(mover=="bo"){
+			movername="black;
+			moverid="2";
+			moverstatus="black";
+		}
+		
+		document.getElementById("out").innerHTML = html;			
+
+		for (var i=0;i<=htmlgrid.length-1;i++){
+			tdata=htmlgrid[i];
+			//console.log (tdata);
+			tdata1=tdata;
+					for (var ij=0;ij<=tdata.length;ij++){
+						n=tdata.charAt(ij);
+						if(isNaN(n)==false)
+							tdata1=tdata1.replace(n, " ".repeat(n));
+					}
+			htmlgrid[i]=tdata1;
+		}
+		
+		var style='gray' , position="top";
+	 
+		var lrowxtop = '<td name="'+position+'l" id ="xtopl" style="background-color:white;height:10px;width:10px;"></td>';
+		var lrowxtopldata="";
+		for ( var i = 0; i <=htmlgrid[0].length-1; i++ ) {
+				if (i==0) {
+						x=ord('x');
+						style='gray;height:10px;width:40px;font-size:10px';
+						}
+				tdata=htmlgrid[i];
+				console.log(tdata.length);
+				if ((i>0) && (i<tdata.length)){
+						x=i+ord('a')-1;
+						style='gray;height:10px;width:40px;font-size:10px';
+					 }
+				if(i==tdata.length){
+						x=ord('y');
+						style='gray;height:10px;width:40px;font-size:10px';
+					}
+								 
+				chr_x=String.fromCharCode(x); 
+				lrowxtopldata=lrowxtopldata+ '<td name="castle" id ="'+chr_x+position+'" style="background-color:'+style+'"> <span class="nondraggable_piece" draggable="false" >'+chr_x+'</span></td>';
+			}
+		lrowxtop= '<td name="'+position+'r" id ="y'+position+'r" style="font-size:10px;background-color:white;height:10px;width:10px"></td>';
+
+		var lrow="<tr>"+lrowxtop+lrowxtopldata+ "</tr>";	
+		var col=9, lrowxmiddle="",rowxmiddledata="",column_id="",square_color="";;
+		var middlerows="",lrowxmiddledata="";
+
+		for (var i=0;i<=htmlgrid.length-1;i++){
+				position='l';	//console.log (tdata);
+				lrowxmiddle= '<td name="'+position+col+'" id ='+position+col+' class="truce" style="height:40px;width:40px;background-color:gray;font-size:10px"><span class="nondraggable" draggable="false">'+col+'</span></td>';
+				rowxmiddledata="";lrowxmiddledata="";
+				tdata=htmlgrid[i];
+
+				for (var ij=0;ij<=tdata.length;ij++){
+						if (ij==0) {
+									x=ord('x');
+									if((col==0) || (col==9)) square_color="naaglok"
+									else if(col%2==1) square_color="whitetruce"
+									else if(col%2==2) square_color="blacktruce";
+								 }
+
+						if ((ij>0) && (ij<tdata.length))
+								 {
+									x=ij+ord('a')-1;
+									if(col==0) {square_color="whitecastle";}
+									else if (col==9) { square_color="blackcastle";}
+									else if (col%2==1) { if((col%2)*(ij%2)==1) {square_color="black";} else {square_color="white";} } 
+									else if (col%2==2) { if((col%2)*(ij%2)==1) {square_color="black";} else {square_color="white";} }						
+								 }
+						if(ij==tdata.length){ x=ord('y');}
+								 
+						chr_x=String.fromCharCode(x); 
+						var colid=chr_x+''+col;
+						var octagonWrap="",octagonWrapInner="";
+						if((colid=='x4')||(colid=='x5')||(colid=='y4')||(colid=='y5')||(colid=='d0')||(colid=='e0')||(colid=='d9')||(colid=='e9')) { octagonWrap= ' octagonWrap';}
+						if((colid=='x4')||(colid=='x5')||(colid=='y4')||(colid=='y5')) { octagonWrapInner= ' octagonT';} 
+						if((colid=='d0')||(colid=='e0')||(colid=='d9')||(colid=='e9')){ octagonWrapInner= ' octagonC';}					
+
+						lrowxmiddledata=lrowxmiddledata+'<td name="warz" id ="'+col+'" class="'+square_color+octagonWrap+ '" style ="height:40px;width:40px">'+ '<span class="draggable_piece'+ octagonWrapInner +'" draggable="true" style ="display:inline-block;" name="'+(tdata[ij] || "").trim()+'">'+ (tdata[ij] || "")+' </span></td>';
+					}
+				rowxmiddledata = lrowxmiddledata+ '<td name="r'+col+'" id =r'+col+' class="truce" style="background-color:gray;height:40px;width:40px;font-size:10px"><span class="nondraggable" draggable="false">'+col+'</span></td>';
+				middlerows=middlerows+"<tr>"+lrowxmiddle+rowxmiddledata+ "</tr>";
+				col=col-1;
+			}
+					
+		position="bot";					
+		var frowxbot = '<td name="'+position+'l" id ="xbotl" style="background-color:white;height:10px;width:10px;"></td>';
+		var frowxbotldata="";
+		for ( var i = 0;  i <=htmlgrid[9].length-1; i++ ) {
+				if (i==0) {
+						x=ord('x');
+						style='gray;height:10px;width:40px;font-size:10px';
+						}
+				tdata=htmlgrid[i];
+				console.log(tdata.length);
+
+				if ((i>0) && (i<tdata.length)) {
+						x=i+ord('a')-1;
+						style='gray;height:10px;width:40px;font-size:10px';
+					 }
+				if(i==tdata.length){
+						x=ord('y');
+						style='gray;height:10px;width:40px;font-size:10px';
+					}
+								 
+				chr_x=String.fromCharCode(x); 
+				frowxbotldata=frowxbotldata+ '<td name="castle" id ="'+chr_x+position+'" style="background-color:'+style+'"> <span class="nondraggable_piece" draggable="false" >'+chr_x+'</span></td>';
+			}
+		frowxbot= '<td name="'+position+'r" id ="y'+position+'r" style="font-size:10px;background-color:white;height:10px;width:10px"></td>';
+		var frow="<tr>"+frowxbot+frowxbotldata+ "</tr>";	
+				
+		var html = '"<table id="graphical_board" width="30%" height="90%" class=\"chess\"> <tbody>"' + lrow+middlerows+frow + "\n</tbody></table>";
+        document.getElementById("out").innerHTML = html;			
+      }
+      fentohtml();
+    </script>
+  </body>
+</html>
