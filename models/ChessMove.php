@@ -87,7 +87,9 @@ class ChessMove {
 		if($mode!='z')
 			$this->piece_type = $piece_type;
 		$this->capture = $capture;
-		
+		$this->board->CommonBorderOpen_Status=$CommonBorderOpen_Status;
+		$this->CommonBorderOpen_Status=$CommonBorderOpen_Status;
+
 		// Adding $store_board sped up the code by 300ms
 		if($controlled_move==true)
 			$store_board=false;
@@ -97,8 +99,6 @@ class ChessMove {
 		if ( $store_board ) {
 			$this->board = clone $old_board;
 
-			if($CommonBorderOpen_Status==1)
-				$this->board->commonborderbreached = true;
 			// Perft uses an empty move to store a board. If not empty move, modify the board.
 			if ( $this->starting_square ) {
 				$movetype=$this->board->make_move($starting_square, $ending_square,$capture, $sameplace);
@@ -372,7 +372,17 @@ function set_killed_king($killedKing):void{
                 //except Inveted King ever king type can be kicked
 				//if ((( $this->board->commonborderbreached == true ) && ( $this->board->CommonBorderOpen_Status==0))
 
-				if ((( $this->board->commonborderbreached == true ) && ( $this->board->CommonBorderOpen_Status==1))
+		//spy border jump = 711, 712, 721, 722 , 714 , 724 ,715 ,716 , 725, 726 , 727, 728, 717 , 718 , 7012 , 7022 , 7014, 7024, 7016 ,7026 , 7028 ,7018
+		//spy cannot jump = 7011, 7021, 7015, 7025, 7027, 7017
+		//spy border intact = 711, 721,  713, 723, 715, 725, 727, 717, 7013, 7023
+
+		//officers border jump break = 911, 921, ,915 , 925, 927, 917 
+		//officers border intact =  913, 923, 9013, 9023,
+		//officers cannot jump = 9011, 9021, 9015, 9025, 9027, 9017
+
+				//if ((( $this->board->commonborderbreached == true ) && ( $this->board->CommonBorderOpen_Status==1))
+				if (( $this->CommonBorderOpen_Status==911)||( $this->CommonBorderOpen_Status==921)||( $this->CommonBorderOpen_Status==915)||
+				( $this->CommonBorderOpen_Status==925)||( $this->CommonBorderOpen_Status==927)||( $this->CommonBorderOpen_Status==917)
 				||
 				( $this->board->wbrokencastle == true ) ||
 				( $this->board->bbrokencastle == true )) {				 

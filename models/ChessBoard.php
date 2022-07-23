@@ -36,8 +36,10 @@ class ChessBoard {
 	const CLASSIC_FEN_REGEX_FORMAT_WCASTLE = '/^([rmneshuvyaäçcgpÖRMNESHIJVÇÄCGP12345678]{1,8})?$/u';
 	const CLASSIC_FEN_REGEX_FORMAT_TRUCE = '/^([ghmGHMcCiIaAvrRVsSnjJNäÄ1]{1})?$/u';
 
-	const DEFAULT_FEN = '13ia31/cmhgsnghmc/1pppppppp1/181/c3cc3c/C3CC3C/181/1PPPPPPPP1/CMHGNSGHMC/13AI31 ~bwc w0 () - 0 1';
-	//const DEFAULT_FEN = '13c1c21/1c1S1n1ic1/ca1phs3c/1p71/c2P5c/C3PH3C/11p1ppp21/1C1N1CH1PC/11C5MC/11I4A11 ~w w0 () - 0 54';
+	//const DEFAULT_FEN = '13ia31/cmhgsnghmc/1pppppppp1/181/c3cc3c/C3CC3C/181/1PPPPPPPP1/CMHGNSGHMC/13AI31 ~bwc w0 () - 0 1';
+	
+	//const DEFAULT_FEN = '13ia31/1mhgsnghm1/1ppppppppc/c81/c3cc3c/C3CC3C/181/CPPPPPPPPC/1MHGNSGHM1/13AI31 ~bwc w0 () - 52 27';
+	const DEFAULT_FEN = '13c1c21/1c1S1n1ic1/ca1phs3c/1p71/c2P5c/C3PH3C/11p1ppp21/1C1N1CH1PC/11C5MC/11I4A11 ~w w0 () - 0 54';
 	
 	public $board = array();// $board[y][x], or in this case, $board[rank][file]
 	public $gametype = 1;//1 means classical Agasthya 2: Means Kautilya
@@ -630,7 +632,7 @@ class ChessBoard {
 			if (strpos($borderdata,"c") !== false){
 				$this->commonborderbreached=false;
 			}
-			else {$this->commonborderbreached=true;}
+			else {$this->commonborderbreached=true;$this->CommonBorderOpen_Status=1;}
 
 		//'1c2ai2c1/cmhgsnghmc/cppppppppc/181/181/181/181/CPPPPPPPPC/CMHGNSGHMC/1C2IA2C1 ~bwc w0 () - 0 1';	
 		$this->controlled_piece = $matches[13] ;
@@ -757,6 +759,11 @@ class ChessBoard {
 		}
 
 		if($matched==false){$fen = $oldfen;}
+		$lastmove=$oldfen;
+		$oldmoves="";
+
+		//if lastmoves="" { add oldmoves then lastmoves}
+		//
 
 		$this->import_fen($fen);
 		if((($playertype==2) && ($this->boardtype==1)) ||
@@ -775,7 +782,10 @@ class ChessBoard {
 			
 				$reading = fopen($systemgameid, 'r');
 				$writing = fopen($systemgameid.'.tmp.txt', 'w');
-			
+
+				$currentdata = file_get_contents($systemgameid);
+				file_put_contents($systemgameid.'_'.time(), $currentdata, LOCK_EX);
+
 				$replaced = false;
 				$importedmatched=false;
 				while (!feof($reading)&&($importedmatched==false)) {
@@ -785,8 +795,17 @@ class ChessBoard {
 						$replaced = true;
 						$importedmatched=true;
 					}
-					if(strlen(rtrim($line))>3)
+					if(strlen(rtrim($line))>=3)
 					fputs($writing, $line.PHP_EOL);
+					if(($importedmatched==true) && ($lastmove!="")&&($lastmove!=null))
+					{
+						$line = '$lastmove='.$lastmove.";"."";
+						$counter=explode( ' ',$line)[6];
+						fputs($writing, $line.PHP_EOL);
+						$lastmove="";
+					}
+
+
 				}
 				fclose($reading);fclose($writing);
 				chmod($systemgameid.".tmp.txt", 0755);
@@ -1096,6 +1115,374 @@ class ChessBoard {
 					{$this->isbwZoneRoyal= true; }
 			}
 	}	 
+
+	function checkpalacemember(int $rank,int $file):bool{
+
+	}
+
+
+	function setSleepingMembers():void
+	{
+		$spy_squares=[];	$spy_limits=0;
+		if($this->board[5][5]!==null) {			$this->board[5][5]->awake=false; } 	if($this->board[4][5]!==null) {			$this->board[4][5]->awake=false;}
+		if($this->board[5][4]!==null) {			$this->board[5][4]->awake=false;} 	if($this->board[4][4]!==null) {			$this->board[4][4]->awake=false;}
+		if($this->board[5][0]!==null) {			$this->board[5][0]->awake=false;} 	if($this->board[5][9]!==null) {			$this->board[5][9]->awake=true;	}
+		if($this->board[4][0]!==null) {			$this->board[4][0]->awake=false;}	if($this->board[4][9]!==null) {			$this->board[4][9]->awake=false;}
+
+		if($this->board[9][5]!==null) {			$this->board[9][5]->awake=false;}	if($this->board[9][4]!==null) {			$this->board[9][4]->awake=false;}
+		if($this->board[0][5]!==null) {			$this->board[0][5]->awake=false;}	if($this->board[0][4]!==null) {			$this->board[0][4]->awake=false;}
+
+		if($this->color_to_move==1){ 
+			$ttt=1;
+		}
+		else if($this->color_to_move==2){
+			$ttt=1;
+		}
+
+				if(($this->board[5][5]!==null)&&($this->board[5][5]->awake==false)){
+
+					if( ( $this->board[5][5]->type==ChessPiece::PAWN) && ($this->board[5][5]->color==$this->color_to_move) && 
+					((($this->board[5][6]->color==$this->color_to_move)&&(($this->board[5][6]->type==ChessPiece::SPY) || ($this->board[5][6]->type==ChessPiece::GENERAL))) || 
+					(($this->board[6][6]->color==$this->color_to_move)&&(($this->board[6][6]->type==ChessPiece::SPY) || ($this->board[6][6]->type==ChessPiece::GENERAL))) || 
+					(($this->board[6][5]->color==$this->color_to_move)&&(($this->board[6][5]->type==ChessPiece::SPY) || ($this->board[6][5]->type==ChessPiece::GENERAL))) ||
+					(($this->board[6][4]->color==$this->color_to_move)&&(($this->board[6][4]->type==ChessPiece::SPY) || ($this->board[6][4]->type==ChessPiece::GENERAL)))			
+					))
+					{
+						$this->board[5][5]->awake=true;
+					}
+
+					if( (($this->board[5][5]->group=="ROYAL") || ($this->board[5][5]->group=="OFFICER")  || ( $this->board[5][5]->group==ChessPiece::SPY)) && ($this->board[5][5]->color==$this->color_to_move) && 
+					((($this->board[5][6]->color==$this->color_to_move)&&(($this->board[5][6]->group=="ROYAL") || ($this->board[5][6]->type==ChessPiece::SPY) || ($this->board[5][6]->type==ChessPiece::GENERAL))) || 
+					(($this->board[6][6]->color==$this->color_to_move)&&(($this->board[6][6]->group=="ROYAL") || ($this->board[6][6]->type==ChessPiece::SPY) || ($this->board[6][6]->type==ChessPiece::GENERAL))) || 
+					(($this->board[6][5]->color==$this->color_to_move)&&(($this->board[6][5]->group=="ROYAL") || ($this->board[6][5]->type==ChessPiece::SPY) || ($this->board[6][5]->type==ChessPiece::GENERAL))) ||
+					(($this->board[6][4]->color==$this->color_to_move)&&(($this->board[5][4]->group=="ROYAL") || ($this->board[6][4]->type==ChessPiece::SPY) || ($this->board[6][4]->type==ChessPiece::GENERAL)))			
+					))
+					{
+						$this->board[5][5]->awake=true;
+					}
+
+				}	
+				if(($this->board[5][4]!==null)&&($this->board[5][4]->awake==false)){
+
+					if( ( $this->board[5][4]->type==ChessPiece::PAWN) && ($this->board[5][4]->color==$this->color_to_move) &&
+					((($this->board[6][3]->color==$this->color_to_move)&&(($this->board[6][3]->type==ChessPiece::SPY) || ($this->board[6][3]->type==ChessPiece::GENERAL))) || 
+					(($this->board[5][3]->color==$this->color_to_move)&&(($this->board[5][3]->type==ChessPiece::SPY) || ($this->board[5][3]->type==ChessPiece::GENERAL))) || 
+					(($this->board[6][5]->color==$this->color_to_move)&&(($this->board[6][5]->type==ChessPiece::SPY) || ($this->board[6][5]->type==ChessPiece::GENERAL))) ||
+					(($this->board[6][4]->color==$this->color_to_move)&&(($this->board[6][4]->type==ChessPiece::SPY) || ($this->board[6][4]->type==ChessPiece::GENERAL)))
+					)){
+							$this->board[5][4]->awake=true;
+					 }
+
+
+					 if( (($this->board[5][4]->group=="ROYAL") || ($this->board[5][4]->group=="OFFICER")  || ( $this->board[5][4]->group==ChessPiece::SPY)) && ($this->board[5][4]->color==$this->color_to_move) && 
+					 ((($this->board[6][3]->color==$this->color_to_move)&&(($this->board[6][3]->group="ROYAL") || ($this->board[6][3]->type==ChessPiece::SPY) || ($this->board[6][3]->type==ChessPiece::GENERAL))) || 
+					 (($this->board[5][3]->color==$this->color_to_move)&&(($this->board[5][3]->group="ROYAL") || ($this->board[5][3]->type==ChessPiece::SPY) || ($this->board[5][3]->type==ChessPiece::GENERAL))) || 
+					 (($this->board[6][5]->color==$this->color_to_move)&&(($this->board[6][5]->group="ROYAL") || ($this->board[6][5]->type==ChessPiece::SPY) || ($this->board[6][5]->type==ChessPiece::GENERAL))) ||
+					 (($this->board[6][4]->color==$this->color_to_move)&&(($this->board[6][4]->group="ROYAL") || ($this->board[6][4]->type==ChessPiece::SPY) || ($this->board[6][4]->type==ChessPiece::GENERAL)))
+					 )){
+							 $this->board[5][4]->awake=true;
+					  }
+
+				}
+
+				if(($this->board[4][5]!==null)&&($this->board[4][5]->awake==false)){
+					
+					 if( ( $this->board[4][5]->type==ChessPiece::PAWN) && ($this->board[4][5]->color==$this->color_to_move) && 
+					 ((($this->board[4][6]->color==$this->color_to_move)&&(($this->board[4][6]->type==ChessPiece::SPY) || ($this->board[4][6]->type==ChessPiece::GENERAL))) || 
+					 (($this->board[3][6]->color==$this->color_to_move)&&(($this->board[3][6]->type==ChessPiece::SPY) || ($this->board[3][6]->type==ChessPiece::GENERAL))) || 
+					 (($this->board[3][5]->color==$this->color_to_move)&&(($this->board[3][5]->type==ChessPiece::SPY) || ($this->board[3][5]->type==ChessPiece::GENERAL))) ||
+					 (($this->board[3][4]->color==$this->color_to_move)&&(($this->board[3][4]->type==ChessPiece::SPY) || ($this->board[3][4]->type==ChessPiece::GENERAL)))			
+					 ))
+					 {
+						 $this->board[4][5]->awake=true;	
+					 }
+
+
+					 if( (($this->board[4][5]->group=="ROYAL") || ($this->board[4][5]->group=="OFFICER")  || ( $this->board[4][5]->group==ChessPiece::SPY)) && ($this->board[4][5]->color==$this->color_to_move) && 
+					 ((($this->board[4][6]->color==$this->color_to_move)&&(($this->board[4][6]->group=="ROYAL") || ($this->board[4][6]->type==ChessPiece::SPY) || ($this->board[4][6]->type==ChessPiece::GENERAL))) || 
+					 (($this->board[3][6]->color==$this->color_to_move)&&(($this->board[3][6]->group=="ROYAL") || ($this->board[3][6]->type==ChessPiece::SPY) || ($this->board[3][6]->type==ChessPiece::GENERAL))) || 
+					 (($this->board[3][5]->color==$this->color_to_move)&&(($this->board[3][5]->group=="ROYAL") || ($this->board[3][5]->type==ChessPiece::SPY) || ($this->board[3][5]->type==ChessPiece::GENERAL))) ||
+					 (($this->board[3][4]->color==$this->color_to_move)&&(($this->board[3][4]->group=="ROYAL") || ($this->board[3][4]->type==ChessPiece::SPY) || ($this->board[3][4]->type==ChessPiece::GENERAL)))			
+					 ))
+					 {
+						 $this->board[4][5]->awake=true;	
+					 }
+
+
+					}
+				if(($this->board[4][4]!==null)&&($this->board[4][4]->awake==false)){
+					 if( ( $this->board[4][4]->type==ChessPiece::PAWN) && ($this->board[4][4]->color==$this->color_to_move) &&
+					 ((($this->board[4][3]->color==$this->color_to_move)&&(($this->board[4][3]->type==ChessPiece::SPY) || ($this->board[4][3]->type==ChessPiece::GENERAL))) || 
+					 (($this->board[3][3]->color==$this->color_to_move)&&(($this->board[3][3]->type==ChessPiece::SPY) || ($this->board[3][3]->type==ChessPiece::GENERAL))) || 
+					 (($this->board[3][5]->color==$this->color_to_move)&&(($this->board[3][5]->type==ChessPiece::SPY) || ($this->board[3][5]->type==ChessPiece::GENERAL))) ||
+					 (($this->board[3][4]->color==$this->color_to_move)&&(($this->board[3][4]->type==ChessPiece::SPY) || ($this->board[3][4]->type==ChessPiece::GENERAL)))
+					 )){
+							 $this->board[4][4]->awake=true;
+					  }
+
+					  if( (($this->board[4][4]->group=="ROYAL") || ($this->board[4][4]->group=="OFFICER")  || ( $this->board[4][4]->group==ChessPiece::SPY)) && ($this->board[4][4]->color==$this->color_to_move) && 
+					  ((($this->board[4][3]->color==$this->color_to_move)&&(($this->board[4][3]->group=="ROYAL") || ($this->board[4][3]->type==ChessPiece::SPY) || ($this->board[4][3]->type==ChessPiece::GENERAL))) || 
+					  (($this->board[3][3]->color==$this->color_to_move)&&(($this->board[3][3]->group=="ROYAL") || ($this->board[3][3]->type==ChessPiece::SPY) || ($this->board[3][3]->type==ChessPiece::GENERAL))) || 
+					  (($this->board[3][5]->color==$this->color_to_move)&&(($this->board[3][5]->group=="ROYAL") || ($this->board[3][5]->type==ChessPiece::SPY) || ($this->board[3][5]->type==ChessPiece::GENERAL))) ||
+					  (($this->board[3][4]->color==$this->color_to_move)&&(($this->board[3][4]->group=="ROYAL") || ($this->board[3][4]->type==ChessPiece::SPY) || ($this->board[3][4]->type==ChessPiece::GENERAL)))			
+					  ))
+					  {
+						  $this->board[4][4]->awake=true;	
+					  }
+
+					}
+			
+		
+			if( $this->commonborderbreached==true){
+				if(($this->board[5][5]!==null)&&($this->board[5][5]->awake==false)){
+
+					if( ( $this->board[5][5]->type==ChessPiece::PAWN) && ($this->board[5][5]->color==$this->color_to_move) && 
+					((($this->board[4][6]->color==$this->color_to_move)&&(($this->board[4][6]->type==ChessPiece::SPY) || ($this->board[4][6]->type==ChessPiece::GENERAL))) 
+					))
+					{
+						$this->board[5][5]->awake=true;
+					}
+
+					if( (($this->board[5][5]->group=="ROYAL") || ($this->board[5][5]->group=="OFFICER")  || ( $this->board[5][5]->group==ChessPiece::SPY)) && ($this->board[5][5]->color==$this->color_to_move) && 
+					((($this->board[4][6]->color==$this->color_to_move)&&(($this->board[4][6]->group=="ROYAL") || ($this->board[4][6]->type==ChessPiece::SPY) || ($this->board[4][6]->type==ChessPiece::GENERAL)))  
+					))
+					{
+						$this->board[5][5]->awake=true;
+					}
+
+				}	
+				if(($this->board[5][4]!==null)&&($this->board[5][4]->awake==false)){
+
+					if( ( $this->board[5][4]->type==ChessPiece::PAWN) && ($this->board[5][4]->color==$this->color_to_move) &&
+					((($this->board[4][3]->color==$this->color_to_move)&&(($this->board[4][3]->type==ChessPiece::SPY) || ($this->board[4][3]->type==ChessPiece::GENERAL))) 
+					)){
+							$this->board[5][4]->awake=true;
+					 }
+
+
+					 if( (($this->board[5][4]->group=="ROYAL") || ($this->board[5][4]->group=="OFFICER")  || ( $this->board[5][4]->group==ChessPiece::SPY)) && ($this->board[5][4]->color==$this->color_to_move) && 
+					 ((($this->board[4][3]->color==$this->color_to_move)&&(($this->board[4][3]->group="ROYAL") || ($this->board[4][3]->type==ChessPiece::SPY) || ($this->board[4][3]->type==ChessPiece::GENERAL))) 					 )){
+							 $this->board[5][4]->awake=true;
+					  }
+
+				}
+
+				if(($this->board[4][5]!==null)&&($this->board[4][5]->awake==false)){
+					
+					 if( ( $this->board[4][5]->type==ChessPiece::PAWN) && ($this->board[4][5]->color==$this->color_to_move) && 
+					 ((($this->board[5][6]->color==$this->color_to_move)&&(($this->board[5][6]->type==ChessPiece::SPY) || ($this->board[5][6]->type==ChessPiece::GENERAL))) 
+					 ))
+					 {
+						 $this->board[4][5]->awake=true;	
+					 }
+
+
+					 if( (($this->board[4][5]->group=="ROYAL") || ($this->board[4][5]->group=="OFFICER")  || ( $this->board[4][5]->group==ChessPiece::SPY)) && ($this->board[4][5]->color==$this->color_to_move) && 
+					 ((($this->board[5][6]->color==$this->color_to_move)&&(($this->board[5][6]->group=="ROYAL") || ($this->board[5][6]->type==ChessPiece::SPY) || ($this->board[5][6]->type==ChessPiece::GENERAL)))
+					 ))
+					 {
+						 $this->board[4][5]->awake=true;	
+					 }
+
+
+					}
+				if(($this->board[4][4]!==null)&&($this->board[4][4]->awake==false)){
+					 if( ( $this->board[4][4]->type==ChessPiece::PAWN) && ($this->board[4][4]->color==$this->color_to_move) &&
+					 ((($this->board[5][3]->color==$this->color_to_move)&&(($this->board[5][3]->type==ChessPiece::SPY) || ($this->board[5][3]->type==ChessPiece::GENERAL)))
+					  )){
+							 $this->board[4][4]->awake=true;
+					  }
+
+					  if( (($this->board[4][4]->group=="ROYAL") || ($this->board[4][4]->group=="OFFICER")  || ( $this->board[4][4]->group==ChessPiece::SPY)) && ($this->board[4][4]->color==$this->color_to_move) && 
+					  ((($this->board[5][3]->color==$this->color_to_move)&&(($this->board[5][3]->group=="ROYAL") || ($this->board[5][3]->type==ChessPiece::SPY) || ($this->board[5][3]->type==ChessPiece::GENERAL)))
+					    ))
+					  {
+						  $this->board[4][4]->awake=true;	
+					  }
+
+					}
+			}					
+			 
+
+//Common Palace status			
+
+			if(($this->board[5][5]!==null)&&($this->board[5][5]->awake==false)){
+
+				if( ( $this->board[5][5]->type==ChessPiece::PAWN) && ($this->board[5][5]->color==$this->color_to_move) && 
+				(($this->board[5][4]->awake==true)&& ($this->board[5][4]->color==$this->color_to_move)&&(($this->board[5][4]->type==ChessPiece::SPY) || ($this->board[5][4]->type==ChessPiece::GENERAL)))			
+				)
+				{
+					$this->board[5][5]->awake=true;
+				}
+
+				if( (($this->board[5][5]->group=="ROYAL") || ($this->board[5][5]->group=="OFFICER")  || ( $this->board[5][5]->group==ChessPiece::SPY)) && ($this->board[5][5]->color==$this->color_to_move) && 
+				($this->board[5][4]->awake==true)&& ($this->board[5][4]->color==$this->color_to_move)&&(($this->board[5][4]->group=="ROYAL") || ($this->board[5][4]->type==ChessPiece::SPY) || ($this->board[5][4]->type==ChessPiece::GENERAL)))
+				{
+					$this->board[5][5]->awake=true;
+				}
+
+			}	
+			if(($this->board[5][4]!==null)&&($this->board[5][4]->awake==false)){
+
+				if( ( $this->board[5][4]->type==ChessPiece::PAWN) && ($this->board[5][4]->color==$this->color_to_move) &&
+				(($this->board[5][5]->awake==true)&& ($this->board[5][5]->color==$this->color_to_move)&&(($this->board[5][5]->type==ChessPiece::SPY) || ($this->board[5][5]->type==ChessPiece::GENERAL)))
+				){
+						$this->board[5][4]->awake=true;
+				 }
+
+
+				 if( (($this->board[5][4]->group=="ROYAL") || ($this->board[5][4]->group=="OFFICER")  || ( $this->board[5][4]->group==ChessPiece::SPY)) && ($this->board[5][4]->color==$this->color_to_move) && 
+				 (($this->board[5][5]->awake==true)&&($this->board[5][5]->color==$this->color_to_move)&&(($this->board[5][5]->group="ROYAL") || ($this->board[5][5]->type==ChessPiece::SPY) || ($this->board[5][5]->type==ChessPiece::GENERAL)))
+				 ){
+						 $this->board[5][4]->awake=true;
+				  }
+
+			}
+
+			if(($this->board[4][5]!==null)&&($this->board[4][5]->awake==false)){
+				
+				 if( ( $this->board[4][5]->type==ChessPiece::PAWN) && ($this->board[4][5]->color==$this->color_to_move) && 
+				 (($this->board[4][4]->awake==true)&&($this->board[4][4]->color==$this->color_to_move)&&(($this->board[4][4]->type==ChessPiece::SPY) || ($this->board[4][4]->type==ChessPiece::GENERAL)))			
+				 )
+				 {
+					 $this->board[4][5]->awake=true;	
+				 }
+
+
+				 if( (($this->board[4][5]->group=="ROYAL") || ($this->board[4][5]->group=="OFFICER")  || ( $this->board[4][5]->group==ChessPiece::SPY)) && ($this->board[4][5]->color==$this->color_to_move) && 
+				 (($this->board[4][4]->awake==true)&&($this->board[4][4]->color==$this->color_to_move)&&(($this->board[4][4]->group=="ROYAL") || ($this->board[4][4]->type==ChessPiece::SPY) || ($this->board[4][4]->type==ChessPiece::GENERAL)))			
+				 )
+				 {
+					 $this->board[4][5]->awake=true;	
+				 }
+
+				}
+			if(($this->board[4][4]!==null)&&($this->board[4][4]->awake==false)){
+				 if( ( $this->board[4][4]->type==ChessPiece::PAWN) && ($this->board[4][4]->color==$this->color_to_move) &&
+				 (($this->board[4][5]->awake==true)&&($this->board[4][5]->color==$this->color_to_move)&&(($this->board[4][5]->type==ChessPiece::SPY) || ($this->board[4][5]->type==ChessPiece::GENERAL)))
+				){
+						 $this->board[4][4]->awake=true;
+				  }
+
+				 if( (($this->board[4][4]->group=="ROYAL") || ($this->board[4][4]->group=="OFFICER")  || ( $this->board[4][4]->group==ChessPiece::SPY)) && ($this->board[4][4]->color==$this->color_to_move) && 
+				  (($this->board[4][5]->awake==true)&&($this->board[4][5]->color==$this->color_to_move)&&(($this->board[4][5]->group=="ROYAL") || ($this->board[4][5]->type==ChessPiece::SPY) || ($this->board[4][5]->type==ChessPiece::GENERAL))) 		
+				)
+				  {
+					  $this->board[4][4]->awake=true;	
+				  }
+
+			}
+		
+	
+			if( $this->commonborderbreached==true){
+				if(($this->board[5][5]!==null)&&($this->board[5][5]->awake==false)){
+
+					if( ( $this->board[5][5]->type==ChessPiece::PAWN) && ($this->board[5][5]->color==$this->color_to_move) && 
+					( (($this->board[5][4]->awake==true)&&(($this->board[5][4]->color==$this->color_to_move)&&(($this->board[5][4]->type==ChessPiece::SPY) || ($this->board[5][4]->type==ChessPiece::GENERAL))) 
+					) ||
+					( ($this->board[4][4]->awake==true)&&(($this->board[4][4]->color==$this->color_to_move)&&(($this->board[4][4]->type==ChessPiece::SPY) || ($this->board[4][4]->type==ChessPiece::GENERAL))) 
+					) ||
+					( ($this->board[4][5]->awake==true)&&(($this->board[4][5]->color==$this->color_to_move)&&(($this->board[4][5]->type==ChessPiece::SPY) || ($this->board[4][5]->type==ChessPiece::GENERAL))) 
+					)))
+					{
+						$this->board[5][5]->awake=true;
+
+					}
+
+					if( (($this->board[5][5]->group=="ROYAL") || ($this->board[5][5]->group=="OFFICER")  || ( $this->board[5][5]->group==ChessPiece::SPY)) && ($this->board[5][5]->color==$this->color_to_move) && 
+					((($this->board[5][4]->awake==true)&&(($this->board[5][4]->color==$this->color_to_move)&&(($this->board[5][4]->group=="ROYAL") || ($this->board[5][4]->type==ChessPiece::SPY) || ($this->board[5][4]->type==ChessPiece::GENERAL)))
+					)||
+					(($this->board[4][4]->awake==true)&&(($this->board[4][4]->color==$this->color_to_move)&&(($this->board[4][4]->group="ROYAL") || ($this->board[4][4]->type==ChessPiece::SPY) || ($this->board[4][4]->type==ChessPiece::GENERAL))) 
+					)||
+					(($this->board[4][5]->awake==true)&&(($this->board[4][5]->color==$this->color_to_move)&&(($this->board[4][5]->group=="ROYAL") || ($this->board[4][5]->type==ChessPiece::SPY) || ($this->board[4][5]->type==ChessPiece::GENERAL)))
+					))){  					
+					{
+						$this->board[5][5]->awake=true;
+					}
+
+				}	
+
+				if(($this->board[5][4]!==null)&&($this->board[5][4]->awake==false)){
+
+					if( ( $this->board[5][4]->type==ChessPiece::PAWN) && ($this->board[5][4]->color==$this->color_to_move) &&
+					((($this->board[4][4]->awake==true)&&(($this->board[4][4]->color==$this->color_to_move)&&(($this->board[4][4]->type==ChessPiece::SPY) || ($this->board[4][4]->type==ChessPiece::GENERAL))) 
+					) ||
+					( ($this->board[5][5]->awake==true)&&(($this->board[5][5]->color==$this->color_to_move)&&(($this->board[5][5]->type==ChessPiece::SPY) || ($this->board[5][5]->type==ChessPiece::GENERAL))) 
+					) ||
+					( ($this->board[4][5]->awake==true)&&(($this->board[4][5]->color==$this->color_to_move)&&(($this->board[4][5]->type==ChessPiece::SPY) || ($this->board[4][5]->type==ChessPiece::GENERAL))) 
+					))){
+							$this->board[5][4]->awake=true;
+					 }
+
+
+					 if( (($this->board[5][4]->group=="ROYAL") || ($this->board[5][4]->group=="OFFICER")  || ( $this->board[5][4]->group==ChessPiece::SPY)) && ($this->board[5][4]->color==$this->color_to_move) && 
+					 ((($this->board[4][4]->awake==true)&&(($this->board[4][4]->color==$this->color_to_move)&&(($this->board[4][4]->group="ROYAL") || ($this->board[4][4]->type==ChessPiece::SPY) || ($this->board[4][5]->type==ChessPiece::GENERAL)))
+					 )||
+					 (($this->board[5][5]->awake==true)&&(($this->board[5][5]->color==$this->color_to_move)&&(($this->board[5][5]->group="ROYAL") || ($this->board[5][5]->type==ChessPiece::SPY) || ($this->board[5][5]->type==ChessPiece::GENERAL)))
+					 )||
+					 (($this->board[4][5]->awake==true)&&(($this->board[4][5]->color==$this->color_to_move)&&(($this->board[4][5]->group="ROYAL") || ($this->board[4][5]->type==ChessPiece::SPY) || ($this->board[4][5]->type==ChessPiece::GENERAL)))
+					 )
+					 )){
+							 $this->board[5][4]->awake=true;
+					  }
+
+				}
+
+				if(($this->board[4][5]!==null)&&($this->board[4][5]->awake==false)){
+					
+					 if( ( $this->board[4][5]->type==ChessPiece::PAWN) && ($this->board[4][5]->color==$this->color_to_move) && 
+					 ((($this->board[4][4]->awake==true)&&(($this->board[4][4]->color==$this->color_to_move)&&(($this->board[4][4]->type==ChessPiece::SPY) || ($this->board[4][4]->type==ChessPiece::GENERAL))) 
+					 ) ||
+					 ( ($this->board[5][5]->awake==true)&&(($this->board[5][5]->color==$this->color_to_move)&&(($this->board[5][5]->type==ChessPiece::SPY) || ($this->board[5][5]->type==ChessPiece::GENERAL))) 
+					 ) ||
+					 ( ($this->board[5][4]->awake==true)&&(($this->board[5][4]->color==$this->color_to_move)&&(($this->board[5][4]->type==ChessPiece::SPY) || ($this->board[5][4]->type==ChessPiece::GENERAL))) 
+					 ))){
+						 $this->board[4][5]->awake=true;	
+					 }
+
+
+					 if( (($this->board[4][5]->group=="ROYAL") || ($this->board[4][5]->group=="OFFICER")  || ( $this->board[4][5]->group==ChessPiece::SPY)) && ($this->board[4][5]->color==$this->color_to_move) && 
+					 ((($this->board[4][4]->awake==true)&&(($this->board[4][4]->color==$this->color_to_move)&&(($this->board[4][4]->group="ROYAL") || ($this->board[4][4]->type==ChessPiece::SPY) || ($this->board[4][4]->type==ChessPiece::GENERAL)))
+					 )||
+					 (($this->board[5][5]->awake==true)&&(($this->board[5][5]->color==$this->color_to_move)&&(($this->board[5][5]->group="ROYAL") || ($this->board[5][5]->type==ChessPiece::SPY) || ($this->board[5][5]->type==ChessPiece::GENERAL)))
+					 )||
+					 (($this->board[5][4]->awake==true)&&(($this->board[5][4]->color==$this->color_to_move)&&(($this->board[5][4]->group="ROYAL") || ($this->board[5][4]->type==ChessPiece::SPY) || ($this->board[5][4]->type==ChessPiece::GENERAL)))
+					 )
+					 ))
+					 {
+						 $this->board[4][5]->awake=true;	
+					 }
+					}
+				if(($this->board[4][4]!==null)&&($this->board[4][4]->awake==false)){
+					 if( ( $this->board[4][4]->type==ChessPiece::PAWN) && ($this->board[4][4]->color==$this->color_to_move) &&
+					 ((($this->board[4][5]->awake==true)&&(($this->board[4][5]->color==$this->color_to_move)&&(($this->board[4][5]->type==ChessPiece::SPY) || ($this->board[4][5]->type==ChessPiece::GENERAL))) 
+					 ) ||
+					 ( ($this->board[5][5]->awake==true)&&(($this->board[5][5]->color==$this->color_to_move)&&(($this->board[5][5]->type==ChessPiece::SPY) || ($this->board[5][5]->type==ChessPiece::GENERAL))) 
+					 ) ||
+					 ( ($this->board[5][4]->awake==true)&&(($this->board[5][4]->color==$this->color_to_move)&&(($this->board[5][4]->type==ChessPiece::SPY) || ($this->board[5][4]->type==ChessPiece::GENERAL))) 
+					 ))){
+							 $this->board[4][4]->awake=true;
+					  }
+
+					  if( (($this->board[4][4]->group=="ROYAL") || ($this->board[4][4]->group=="OFFICER")  || ( $this->board[4][4]->group==ChessPiece::SPY)) && ($this->board[4][4]->color==$this->color_to_move) && 
+					  ((($this->board[4][5]->awake==true)&&(($this->board[4][5]->color==$this->color_to_move)&&(($this->board[4][5]->group="ROYAL") || ($this->board[4][5]->type==ChessPiece::SPY) || ($this->board[4][5]->type==ChessPiece::GENERAL)))
+					  )||
+					  (($this->board[5][5]->awake==true)&&(($this->board[5][5]->color==$this->color_to_move)&&(($this->board[5][5]->group="ROYAL") || ($this->board[5][5]->type==ChessPiece::SPY) || ($this->board[5][5]->type==ChessPiece::GENERAL)))
+					  )||
+					  (($this->board[5][4]->awake==true)&&(($this->board[5][4]->color==$this->color_to_move)&&(($this->board[5][4]->group="ROYAL") || ($this->board[5][4]->type==ChessPiece::SPY) || ($this->board[5][4]->type==ChessPiece::GENERAL)))
+					  )
+					  ))
+					  {
+						  $this->board[4][4]->awake=true;	
+					  }
+
+					}
+		
+				}
+			}					
+				
+		}
+
 	
 	function setRoyalZone():void{
 		$spy_squares=[];
@@ -1118,7 +1505,7 @@ class ChessBoard {
 				$this->iswwZoneRoyal= true;
 			}
 			//War became Fullmover inActive squares.
-			else if(($this->wkingsquare->file>0) && ($this->wkingsquare->file<9)&& ($this->wasquare->file>0) && ($this->wasquare->file<9)&&
+			if(($this->wkingsquare->file>0) && ($this->wkingsquare->file<9)&& ($this->wasquare->file>0) && ($this->wasquare->file<9)&&
 			(  ($this->wkingsquare->rank>5) && ($this->wkingsquare->rank<9))&& (($this->wasquare->rank>5) && ($this->wasquare->rank<9)))
 			{
 					$this->isbwZoneRoyal= true; 
@@ -1144,13 +1531,11 @@ class ChessBoard {
 				$this->iswcZoneRoyal= true;
 			}
 			//Check the CASTLE Zone became inactive royal
-			else if(($this->bkingsquare->file>0) && ($this->bkingsquare->file<9)&& ($this->basquare->file>0) && ($this->basquare->file<9)&&
+			if(($this->bkingsquare->file>0) && ($this->bkingsquare->file<9)&& ($this->basquare->file>0) && ($this->basquare->file<9)&&
 			(  ($this->bkingsquare->rank==9))&& (($this->basquare->rank==9)))
 			{
 					$this->isbcZoneRoyal= true; 
 			}
-
-
 
 
 			//Check the Left Truce Zone became inactive royal
@@ -1248,7 +1633,8 @@ class ChessBoard {
 
 	
 	//function export_fen_moves($move->starting_square,$move->ending_square)
-	function export_fen_moves(ChessSquare $starting_square,ChessSquare $ending_square, bool $controlled_move=false, int $tamedpawn=0): string {
+
+	function export_fen_moves(int $CommonBorderOpen_Status=1,ChessSquare $starting_square,ChessSquare $ending_square, bool $controlled_move=false, int $tamedpawn=0): string {
 		//Echo '<li> ChessBoard.php 2# function export_fen called </li>';
 		$string = '';
 		$piece=null;
@@ -1615,10 +2001,33 @@ class ChessBoard {
 			if (($this->wbrokencastle==false)){
 				$string .= "w";
 			}	
-			if (($this->commonborderbreached==false)){
+			// 2 = Already open 1 = Open 0 = Not Open 
+		//spy border jump = 711, 712, 721, 722 , 714 , 724 ,715 ,716 , 725, 726 , 727, 728, 717 , 718 , 7012 , 7022 , 7014, 7024, 7016 ,7026 , 7028 ,7018
+		//spy cannot jump = 7011, 7021, 7015, 7025, 7027, 7017
+		//spy border intact = 711, 721,  713, 723, 715, 725, 727, 717, 7013, 7023
+
+		//officers border jump break = 911, 921, ,715 , 725, 727, 717 
+		//officers border intact =  913, 923, 9013, 9023,
+		//officers cannot jump = 9011, 9021, 9015, 9025, 9027, 9017
+
+		if(($this->CommonBorderOpen_Status==null)||($this->CommonBorderOpen_Status<1))
+			$this->CommonBorderOpen_Status=$CommonBorderOpen_Status;
+
+
+			if (($this->CommonBorderOpen_Status==711)||($this->CommonBorderOpen_Status==721)||
+			($this->CommonBorderOpen_Status==713)||($this->CommonBorderOpen_Status==723)||
+			($this->CommonBorderOpen_Status==715)||($this->CommonBorderOpen_Status==725)||
+			($this->CommonBorderOpen_Status==717)||($this->CommonBorderOpen_Status==727)||
+			($this->CommonBorderOpen_Status==7013)||($this->CommonBorderOpen_Status==7023)){
 				$string .= "c";
 			}
-
+			else if ( ($this->CommonBorderOpen_Status==913)||($this->CommonBorderOpen_Status==923)||
+			($this->CommonBorderOpen_Status==9013)||($this->CommonBorderOpen_Status==9023)){
+				$string .= "c";
+			}
+			else if (($this->commonborderbreached==false)&&($this->CommonBorderOpen_Status<=1)){
+				$string .= "c";
+			}		
 								
 		if ((strtolower($instance)=='n')&&($this->controlled_color!==null) && ($this->controller_color!==null) && ($this->controlled_color == ChessPiece::WHITE)){
 				if (($this->board[$starting_square->rank][$starting_square->file]==null)&&($controlled_move==true)
@@ -1955,7 +2364,11 @@ class ChessBoard {
 				fclose($file);
 
 				if($matched==2){
+
 					$file = fopen($systemgameid,"a");
+					$currentdata = file_get_contents($systemgameid);
+					file_put_contents($systemgameid.'_'.time(), $currentdata, LOCK_EX);
+
 					$movecount=0;
 					foreach ( $legal_moves as $key => $move ): 
 						$movecount=$movecount+1;
@@ -1963,8 +2376,8 @@ class ChessBoard {
 						$notationvalue="";$ending_square=$move->ending_square;
 						if($move->pushedending_square!==null)
 							$ending_square=$move->pushedending_square;
-						$move_FEN= $move->board->export_fen_moves($move->starting_square,$move->ending_square);
-						$move->ending_square=$ending_square;
+							$move_FEN = $move->board->export_fen_moves($move->CommonBorderOpen_Status, $move->starting_square,$move->ending_square);
+							$move->ending_square=$ending_square;
 						$notationvalue=$move->get_notation();
 						fwrite($file, $movecount.'_Move='.$move_FEN.';');
 						fwrite($file,$movecount.'_Notation='.$notationvalue.PHP_EOL);
@@ -1984,7 +2397,8 @@ class ChessBoard {
 				$notationvalue="";$ending_square=$move->ending_square;
 				if($move->pushedending_square!==null)
 					$ending_square=$move->pushedending_square;
-					$move_FEN = $move->board->export_fen_moves($move->starting_square,$move->ending_square);
+					$move->board->CommonBorderOpen_Status=$move->CommonBorderOpen_Status;
+					$move_FEN = $move->board->export_fen_moves($move->CommonBorderOpen_Status,$move->starting_square,$move->ending_square);
 					$move->ending_square=$ending_square;
 					$notationvalue=$move->get_notation();
 					fwrite($file, $movecount.'_Move='.$move_FEN.';');

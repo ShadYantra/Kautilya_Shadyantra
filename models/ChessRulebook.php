@@ -12,6 +12,7 @@ class ChessRulebook {
 		13 => array(2,2), 14 => array(2,-2), 15 => array(-2,2), 16 => array(-2,-2)
 	);
 
+
 	const DIRECTION_OFFSETS = array( self::NORTH => array(1,0), self::SOUTH => array(-1,0), self::EAST => array(0,1), self::WEST => array(0,-1), self::NORTHEAST => array(1,1), self::NORTHWEST => array(1,-1), self::SOUTHEAST => array(-1,1), self::SOUTHWEST => array(-1,-1));
 	const RBottom_DIRECTIONS = array( self::WEST, self::NORTH, self::NORTHWEST );
 	const LBottom_DIRECTIONS = array( self::EAST, self::NORTH, self::NORTHEAST );
@@ -78,6 +79,8 @@ class ChessRulebook {
 		$board->get_generals_on_truce(1);
 		$board->get_compromised_castles();
 		$board->setRoyalZone();
+		$board->setSleepingMembers();
+
 		$get_Killing_Allowed=0;	$nonnaarad_can_move=true;
 
 		if(($board->controller_color!=null) &&(($board->controller_color==$color_to_move)&&($board->controlled_color==3-$color_to_move))){
@@ -241,13 +244,18 @@ class ChessRulebook {
 				$senapati_square=$board->get_general_square($color_to_move);
 
 				if((($piece->group=="SOLDIER") || ($piece->group=="OFFICER")) && ($piece->type!=ChessPiece::GENERAL)){
+
 					if(($senapati_square==null)){
-						$get_Killing_Allowed=0;
-						}
+							$get_Killing_Allowed=0;
+							}						
 					else {
 						$piece->neighborgeneral=self::has_general_neighbour(self::GENERAL_DIRECTIONS,$piece->square,$piece->square,$color_to_move , $board);
 					}
 				}
+
+				if(($piece->controlledpiece==true)){
+					$get_Killing_Allowed=0;
+					}			
 				
 				//Spies/Royals and General is required for killing allowed
 				if((($piece->group=="SOLDIER") || ($piece->group=="OFFICER"))&& ((($piece->color==1)&&($board->arewcommaderssleeping==true)) || (($piece->color==2)&&($board->arebcommaderssleeping==true)))){
@@ -353,10 +361,7 @@ class ChessRulebook {
 		}
 		
 		if ( $need_perfect_move_list ) {
-			if ($king!=null) {
-				$moves = self::eliminate_king_in_check_moves($king, $moves, $color_to_move);
-			}
-			else if(($king==null) && ($board->Winner!='-1')){
+			if(($king==null) && ($board->Winner!='-1')){
 				$moves = null;	$moves = array();
 				return $moves;
 			}
@@ -568,8 +573,8 @@ class ChessRulebook {
 			{
 				if ($board->board[$rank][$file]) {
 					//Code was missing for Semi-Royal
-					if ( (($board->board[$rank][$file]->color == $color_to_move) && ($board->board[$rank][$file]->group=='OFFICER'))||
-					(($board->board[$rank][$file]->color == $color_to_move) && ($board->board[$rank][$file]->group=='SEMIROYAL')))
+					if( ($board->board[$rank][$file]->awake==true) && ( (($board->board[$rank][$file]->color == $color_to_move) && ($board->board[$rank][$file]->group=='OFFICER'))||
+					(($board->board[$rank][$file]->color == $color_to_move) && ($board->board[$rank][$file]->group=='SEMIROYAL'))))
 					{
 						 //*echo ' Ending square contains a friendly General ';*/
 						return $ending_square;
@@ -626,9 +631,8 @@ class ChessRulebook {
 			($ending_square->rank>=$minrank)&&($ending_square->rank<=$maxrank) && ($ending_square->file>=1) && ($ending_square->file<=8))) //Check within War Zone
 			{
 				if ($board->board[$rank][$file]) {
-					if ( (($board->board[$rank][$file]->color == $color_to_move) && (($board->board[$rank][$file]->group=='OFFICER')||($board->board[$rank][$file]->group=='SOLDIER'))))
+					if ( (/*($board->board[$rank][$file]->color == $color_to_move) && */(($board->board[$rank][$file]->group=='OFFICER')||($board->board[$rank][$file]->group=='SOLDIER'))))
 					{
-						 //*echo ' Ending square contains a friendly General ';*/
 						return $ending_square;
 					}
 					else
@@ -1629,6 +1633,24 @@ class ChessRulebook {
 									else
 										return null;
 								}
+							else if($royaltype=="GENERAL") { 
+									if (($board->board[$rank][$file]->color == $color_to_move) && (($board->board[$rank][$file]->type==ChessPiece::GENERAL)))
+									{
+										 //*echo ' Ending square contains a friendly SEMIROYAL ';*/
+										return $ending_square;
+									}
+									else
+										return null;
+								}
+							else if($royaltype=="NOBLE") { 
+									if (($board->board[$rank][$file]->color == $color_to_move) && (($board->board[$rank][$file]->type==ChessPiece::GODMAN)))
+									{
+										 //*echo ' Ending square contains a friendly SEMIROYAL ';*/
+										return $ending_square;
+									}
+									else
+										return null;
+								}													
 					}
 					else if (($board->isCurrentZoneRoyal==true) &&( (($board->wbrokencastle==true)&&(($ending_square->rank==0)&&($starting_square->rank==1)) || (($board->bbrokencastle==true)&&($ending_square->rank==9)&&($starting_square->rank==8))) && 
 					((($starting_square->file==$ending_square->file+1))||
@@ -1661,6 +1683,24 @@ class ChessRulebook {
 							else
 								return null;
 						}
+						else if($royaltype=="GENERAL") { 
+							if (($board->board[$rank][$file]->color == $color_to_move) && (($board->board[$rank][$file]->type==ChessPiece::GENERAL)))
+							{
+								 //*echo ' Ending square contains a friendly SEMIROYAL ';*/
+								return $ending_square;
+							}
+							else
+								return null;
+						}
+						else if($royaltype=="NOBLE") { 
+							if (($board->board[$rank][$file]->color == $color_to_move) && (($board->board[$rank][$file]->type==ChessPiece::GODMAN)))
+							{
+								 //*echo ' Ending square contains a friendly SEMIROYAL ';*/
+								return $ending_square;
+							}
+							else
+								return null;
+						}								
 					}
 					else if (((( $board->wbrokencastle==false)&&(($ending_square->rank==1)&&($starting_square->rank==0)) || (($board->bbrokencastle==false)&&($ending_square->rank==8)&&($starting_square->rank==9))) && 
 					((($starting_square->file==$ending_square->file+1))||
@@ -1706,6 +1746,24 @@ class ChessRulebook {
 							else
 								return null;
 						}
+						else if($royaltype=="GENERAL") { 
+							if (($board->board[$rank][$file]->color == $color_to_move) && (($board->board[$rank][$file]->type==ChessPiece::GENERAL)))
+							{
+								 //*echo ' Ending square contains a friendly SEMIROYAL ';*/
+								return $ending_square;
+							}
+							else
+								return null;
+						}
+						else if($royaltype=="NOBLE") { 
+							if (($board->board[$rank][$file]->color == $color_to_move) && (($board->board[$rank][$file]->type==ChessPiece::GODMAN)))
+							{
+								 //*echo ' Ending square contains a friendly SEMIROYAL ';*/
+								return $ending_square;
+							}
+							else
+								return null;
+						}								
 					}
 					else if (($board->isCurrentZoneRoyal==false) &&( (($board->wbrokencastle==true)&&(($ending_square->rank==0)&&($starting_square->rank==1)) || (($board->bbrokencastle==true)&&($ending_square->rank==9)&&($starting_square->rank==8))) && 
 					((($starting_square->file==$ending_square->file+1))||
@@ -1739,6 +1797,24 @@ class ChessRulebook {
 							else
 								return null;
 						}
+						else if($royaltype=="GENERAL") { 
+							if (($board->board[$rank][$file]->color == $color_to_move) && (($board->board[$rank][$file]->type==ChessPiece::GENERAL)))
+							{
+								 //*echo ' Ending square contains a friendly SEMIROYAL ';*/
+								return $ending_square;
+							}
+							else
+								return null;
+						}
+						else if($royaltype=="NOBLE") { 
+							if (($board->board[$rank][$file]->color == $color_to_move) && (($board->board[$rank][$file]->type==ChessPiece::GODMAN)))
+							{
+								 //*echo ' Ending square contains a friendly SEMIROYAL ';*/
+								return $ending_square;
+							}
+							else
+								return null;
+						}							
 					}
 
 			}	
@@ -1765,32 +1841,53 @@ class ChessRulebook {
 			{
 				if ($board->board[$rank][$file]) {
 					if($royaltype=="ALL") { 
-							if (($board->board[$rank][$file]->color == $color_to_move) && (($board->board[$rank][$file]->group=='ROYAL')||($board->board[$rank][$file]->group=='SEMIROYAL')))
+							if (($board->board[$rank][$file]->color == $color_to_move) && (($board->board[$rank][$file]->group=='ROYAL')||($board->board[$rank][$file]->group=='SEMIROYAL')) &&($board->board[$rank][$file]->awake==true))
 							{
 								 //*echo ' Ending square contains a friendly ROYAL ';*/
 								return $ending_square;
-							}
+							}				
 							else
 								return null;
 						}
 					else if($royaltype=="ROYAL") { 
-							if (($board->board[$rank][$file]->color == $color_to_move) && (($board->board[$rank][$file]->group=='ROYAL')))
+							if (($board->board[$rank][$file]->color == $color_to_move) && (($board->board[$rank][$file]->group=='ROYAL')&&($board->board[$rank][$file]->awake==true)))
 							{
 								 //*echo ' Ending square contains a friendly ROYAL ';*/
 								return $ending_square;
-							}
+							}		
 							else
 								return null;
 						}
 					else if($royaltype=="SEMIROYAL") { 
-							if (($board->board[$rank][$file]->color == $color_to_move) && (($board->board[$rank][$file]->group=='SEMIROYAL')))
+							if (($board->board[$rank][$file]->color == $color_to_move) && (($board->board[$rank][$file]->group=='SEMIROYAL')) && ($board->board[$rank][$file]->awake==true))
 							{
 								 //*echo ' Ending square contains a friendly SEMIROYAL ';*/
+
+
+								 // Add the logic to check if the piece is not sleeping (Must be awake) in Palace.
 								return $ending_square;
 							}
 							else
 								return null;
 						}
+						else if($royaltype=="GENERAL") { 
+							if (($board->board[$rank][$file]->color == $color_to_move) && (($board->board[$rank][$file]->type==ChessPiece::GENERAL)&&($board->board[$rank][$file]->awake==true)))
+							{
+								 //*echo ' Ending square contains a friendly SEMIROYAL ';*/
+								return $ending_square;
+							}			
+							else
+								return null;
+						}
+					else if($royaltype=="NOBLE") { 
+							if (($board->board[$rank][$file]->color == $color_to_move) && (($board->board[$rank][$file]->type==ChessPiece::GODMAN)&&($board->board[$rank][$file]->awake==true)))
+							{
+								 //*echo ' Ending square contains a friendly SEMIROYAL ';*/
+								return $ending_square;
+							}				
+							else
+								return null;
+						}								
 					}
 				else
 				  return null;
@@ -1833,6 +1930,24 @@ class ChessRulebook {
 							else
 								return null;
 						}
+						else if($royaltype=="GENERAL") { 
+							if (($board->board[$rank][$file]->color == $color_to_move) && (($board->board[$rank][$file]->type==ChessPiece::GENERAL)))
+							{
+								 //*echo ' Ending square contains a friendly SEMIROYAL ';*/
+								return $ending_square;
+							}
+							else
+								return null;
+						}
+					else if($royaltype=="NOBLE") { 
+							if (($board->board[$rank][$file]->color == $color_to_move) && (($board->board[$rank][$file]->type==ChessPiece::GODMAN)))
+							{
+								 //*echo ' Ending square contains a friendly SEMIROYAL ';*/
+								return $ending_square;
+							}
+							else
+								return null;
+						}						
 					}
 				else
 				  return null;
@@ -2021,7 +2136,9 @@ class ChessRulebook {
 	}
 
 	static function set_naarad_for_fullmoves($board){
-			self::populate_opponent_neighbours($board); /**/
+			//self::populate_opponent_neighbours($board); /**/
+			self::populate_controlled_army_neighbours($board); /**/
+
 	}
 
 	static function set_general_for_elevatedmoves($board):void{
@@ -2117,6 +2234,8 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 	$ending_square=null;
 	$starting_square=null;
 	$allpieces = null;
+	$board->PinnedBRefugees= [];
+	$board->PinnedWRefugees= [];
 
 	if(($board->controller_color==null)||($board->controller_color!=$board->controlled_color)){
 		$board->controller_color=3-$opponent_colors;
@@ -2171,6 +2290,68 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 		}
 }
 
+static function check_armed_neighbours(&$board,int $opponent_colors,bool $naarad_overall_ROYALp)
+{
+	$ending_square=null;
+	$starting_square=null;
+	$allpieces = null;
+	$board->PinnedBRefugees= [];
+	$board->PinnedWRefugees= [];
+
+	if(($board->controller_color==null)||($board->controller_color!=$board->controlled_color)){
+		$board->controller_color=3-$opponent_colors;
+		$board->controlled_color=$opponent_colors;
+	}
+
+for ($naaradcolor=1;$naaradcolor<=2;$naaradcolor++){
+
+	$allpieces=null;
+
+	
+	if(($board->bnsquare!=null)&&($naaradcolor==2))
+		$starting_square=$board->bnsquare;
+
+	if(($board->wnsquare!=null)&&($naaradcolor==1))
+		$starting_square=$board->wnsquare;
+
+		if($naarad_overall_ROYALp==true) { $board->board[$starting_square->rank][$starting_square->file]->controlledpiece=false ;$starting_square=null;}
+
+	if($starting_square!=null){	
+		foreach ( self::KING_DIRECTIONS as $direction ) {
+			$current_xy = self::DIRECTION_OFFSETS[$direction];
+			$ending_square = self::square_surrounded_by_army( $starting_square, $current_xy[0], $current_xy[1], $opponent_colors, $board );
+			if(!$ending_square)
+				{ continue;
+				}
+			if($ending_square!=null)
+				{
+					if(($board->board[$ending_square->rank][$ending_square->file]->group=='OFFICER') ||($board->board[$ending_square->rank][$ending_square->file]->group=='SOLDIER'))
+						$board->board[$ending_square->rank][$ending_square->file]->controlledpiece=true;
+					$allpieces[] = $board->board[$ending_square->rank][$ending_square->file];
+					continue;
+				}
+			}
+		}
+
+		if(($naaradcolor==1) && ($board->whitencanfullmove==1)) $board->PinnedWRefugees= $allpieces; 
+		//else $board->PinnedBRefugees= [];
+		if(($naaradcolor==2)  && ($board->blackncanfullmove==1)) $board->PinnedBRefugees= $allpieces;
+	}
+
+	/*if(!$allpieces)
+		{
+		if($opponent_colors==2) $board->PinnedBRefugees= [];
+		if($opponent_colors==1) $board->PinnedWRefugees= [];
+		}
+	else
+		{
+		if(($opponent_colors==2) && ($board->whitencanfullmove==1)) $board->PinnedBRefugees= $allpieces; 
+		//else $board->PinnedBRefugees= [];
+		if(($opponent_colors==1)  && ($board->blackncanfullmove==1)) $board->PinnedWRefugees= $allpieces;
+		//else $board->PinnedWRefugees= [];
+		}*/
+}
+
 	static function populate_opponent_neighbours( $board){
 		//check opponent ROYALs
 		$wnpiece=null;$bnpiece=null;
@@ -2189,6 +2370,40 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 			self::check_opponent_neighbours($board,2,$naarad_Opponent_ROYALp,$naarad_Opponent_ROYALp);
 		}
 	}
+
+
+	static function populate_controlled_army_neighbours( $board){
+		//check opponent ROYALs
+		$wnpiece=null;$bnpiece=null;
+		$naarad_Opponent_ROYALp=false;
+		$naarad_self_ROYALp=false;	$naarad_overall_ROYALp=false;
+
+
+
+		if($board->color_to_move==2)//($board->bnsquare!=null))
+		{	$bnpiece=$board->board[$board->bnsquare->rank][$board->bnsquare->file];
+			$naarad_Opponent_ROYALp=self::has_ROYAL_neighbours( self::KING_DIRECTIONS, $board->bnsquare, $board->bnsquare, 1, $board );	
+			$naarad_self_ROYALp=self::has_ROYAL_neighbours( self::KING_DIRECTIONS, $board->bnsquare, $board->bnsquare, 2, $board );	
+
+			if(($naarad_Opponent_ROYALp==true) || ($naarad_self_ROYALp==true))
+				$naarad_overall_ROYALp=true;
+			self::check_armed_neighbours($board,2,$naarad_Opponent_ROYALp,$naarad_overall_ROYALp);
+		}
+		
+		$naarad_overall_ROYALp=false;
+		if($board->color_to_move==1)//($board->bnsquare!=null))
+		{
+			$wnpiece=$board->board[$board->wnsquare->rank][$board->wnsquare->file];
+			$naarad_Opponent_ROYALp=self::has_ROYAL_neighbours( self::KING_DIRECTIONS, $board->wnsquare, $board->wnsquare, 2, $board );	
+			$naarad_self_ROYALp=self::has_ROYAL_neighbours( self::KING_DIRECTIONS, $board->bnsquare, $board->bnsquare, 1, $board );	
+
+			if(($naarad_Opponent_ROYALp==true) || ($naarad_self_ROYALp==true))
+				$naarad_overall_ROYALp=true;
+
+			self::check_armed_neighbours($board,1,$naarad_Opponent_ROYALp,$naarad_overall_ROYALp);
+		}
+	}
+
 
 	//in future, merge this function with has_opponent_ROYAL_neighbours
 
@@ -2301,6 +2516,9 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 		return $ending_square;
 	}
 
+
+
+	
 	static function has_ROYAL_neighbours( /**/
 			array $directions_list,
 			ChessSquare $actual_square,
@@ -2340,6 +2558,44 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 				return TRUE;
 		}
 
+		static function has_SPY_General_neighbours( /**/
+			array $directions_list,
+			ChessSquare $actual_square,
+			ChessSquare $starting_square,
+			$color_to_move,
+			ChessBoard $board,
+			$royaltype="ALL"
+		): bool {
+			$ending_square=null;
+			foreach ( $directions_list as $direction ) {
+					$current_xy = self::DIRECTION_OFFSETS[$direction];
+					$current_xy[0] *= 1;
+					$current_xy[1] *= 1;
+
+					$ending_square = self::ROYAL_square_surrounded_by_ROYALs(
+						$actual_square,
+						$starting_square,
+						$current_xy[0],
+						$current_xy[1],
+						$color_to_move,
+						$board,
+						TRUE,
+						"Tight",$royaltype
+					);
+					if(!$ending_square)
+					{ continue;
+					}
+					if($ending_square!=null)
+					{
+						return TRUE;
+					}
+				}
+			if(!$ending_square)
+			{ return FALSE;
+			}
+			else
+				return TRUE;
+		}
 
 		static function is_trapped_in_palace( /**/
 			array $directions_list,
@@ -2848,6 +3104,185 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 	}
 
 	//Army can retreat as per King or Generals Order
+	static function get_CommonBorderOpen_Status_(
+		ChessPiece $piece,
+		$color_to_move,
+		ChessBoard $board,
+		ChessSquare $ending_square,
+		bool $elevatedstatus=false
+	):int {
+
+
+		//spy border jump = 711, 712, 721, 722 , 714 , 724 ,715 ,716 , 725, 726 , 727, 728, 717 , 718 , 7012 , 7022 , 7014, 7024, 7016 ,7026 , 7028 ,7018
+		//spy cannot jump = 7011, 7021, 7015, 7025, 7027, 7017
+		//spy border intact = 711, 721,  713, 723, 715, 725, 727, 717, 7013, 7023
+
+		//officers border jump break = 911, 921, ,715 , 725, 727, 717 
+		//officers border intact =  913, 923, 9013, 9023,
+		//officers cannot jump = 9011, 9021, 9015, 9025, 9027, 9017
+
+
+		if($board->board[$ending_square->rank][$ending_square->file]!==null) {return 0;}
+		//True = Open Border // False = May or May not have Border
+		if((($piece->type==7)|| ($piece->type==6)) &&( $elevatedstatus==true)) {
+			if((($piece->color==1) && ($ending_square->rank>4) &&($piece->square->rank<=4)) && ($board->commonborderbreached==false))
+			{	return 711;	} //WarBorder Not broken. Inside different warzone. Can jump.
+			else if((($piece->color==1) && ($ending_square->rank>4) &&($piece->square->rank<=4)) && ($board->commonborderbreached==true))
+			{	return 712;	} //WarBorder already broken. Inside different warzone. Can jump.
+			else if(  (($piece->color==2) && ($ending_square->rank<5) &&($piece->square->rank>=5))&&($board->commonborderbreached==false))
+			{	return 721;	} //WarBorder Not broken. Inside different warzone.  Can jump.
+			else if(  (($piece->color==2) && ($ending_square->rank<5) &&($piece->square->rank>=5))&&($board->commonborderbreached==true))
+			{	return 722;	} //WarBorder already broken. Inside different warzone. Can jump.
+
+			else if(  (($piece->color==1) && ($ending_square->rank<=4) &&($piece->square->rank<=4))&&($board->commonborderbreached==false))
+			{	return 713;	}	//WarBorder Not broken. Inside own warzone. Not jumping.
+			else if(  (($piece->color==1) && ($ending_square->rank<=4) &&($piece->square->rank<=4))&&($board->commonborderbreached==true))
+			{	return 714;	}	//WarBorder already broken. Inside own warzone. Not jumping.			
+			else if(  (($piece->color==2) && ($ending_square->rank>=5) &&($piece->square->rank>=5))&&($board->commonborderbreached==false))
+			{	return 723;	}	//WarBorder Not broken. Inside own warzone. Not jumping.
+			else if(  (($piece->color==2) && ($ending_square->rank>=5) &&($piece->square->rank>=5))&&($board->commonborderbreached==true))
+			{	return 724;	}	//WarBorder already broken. Inside own warzone. Not jumping.	
+
+			else if(  (($piece->color==1) && ($ending_square->rank<5) &&($piece->square->rank>=5))&&($board->commonborderbreached==false))
+			{	return 715;	} //WarBorder Not broken. Jumping from opponent Warzone to own warzone. Can jump.
+			else if(  (($piece->color==1) && ($ending_square->rank<5) &&($piece->square->rank>=5))&&($board->commonborderbreached==true))
+			{	return 716;	} //WarBorder already broken. Jumping from opponent Warzone to own warzone. Can jump.			
+			else if((($piece->color==1) && ($ending_square->rank>4) &&($piece->square->rank<=4)) && ($board->commonborderbreached==false))
+			{	return 725;	} //WarBorder Not broken. Jumping from opponent Warzone to own warzone. Can jump.
+			else if((($piece->color==1) && ($ending_square->rank>4) &&($piece->square->rank<=4)) && ($board->commonborderbreached==true))
+			{	return 726;	} //WarBorder already broken. Jumping from opponent Warzone to own warzone. Can jump.
+			
+			else if(  (($piece->color==2) && ($ending_square->rank<=4) &&($piece->square->rank<=4))&&($board->commonborderbreached==false))
+			{	return 727;	}	//WarBorder Not broken. Jumping from opponent Warzone to own warzone. Can jump.
+			else if(  (($piece->color==2) && ($ending_square->rank<=4) &&($piece->square->rank<=4))&&($board->commonborderbreached==true))
+			{	return 728;	}	//WarBorder already broken. Jumping from opponent Warzone to own warzone. Can jump			
+			else if(  (($piece->color==1) && ($ending_square->rank>=5) &&($piece->square->rank>=5))&&($board->commonborderbreached==false))
+			{	return 717;	}	//WarBorder Not broken. Jumping from opponent Warzone to own warzone. Can jump.
+			else if(  (($piece->color==1) && ($ending_square->rank>=5) &&($piece->square->rank>=5))&&($board->commonborderbreached==true))
+			{	return 718;	}	//WarBorder already broken. Jumping from opponent Warzone to own warzone. Can jump
+
+		}
+		else if((($piece->type==7)|| ($piece->type==6))&&( $elevatedstatus==false)) {
+			if((($piece->color==1) && ($ending_square->rank>4) &&($piece->square->rank<=4)) && ($board->commonborderbreached==false))
+			{	return 7011;	} //WarBorder Not broken. Inside different warzone. Cannot jump.
+			else if((($piece->color==1) && ($ending_square->rank>4) &&($piece->square->rank<=4)) && ($board->commonborderbreached==true))
+			{	return 7012;	} //WarBorder already broken. Inside different warzone. Can jump.
+			else if(  (($piece->color==2) && ($ending_square->rank<5) &&($piece->square->rank>=5))&&($board->commonborderbreached==false))
+			{	return 7021;	} //WarBorder Not broken. Inside different warzone.  Cannot jump.
+			else if(  (($piece->color==2) && ($ending_square->rank<5) &&($piece->square->rank>=5))&&($board->commonborderbreached==true))
+			{	return 7022;	} //WarBorder already broken. Inside different warzone.  Can jump.
+
+			else if(  (($piece->color==1) && ($ending_square->rank<=4) &&($piece->square->rank<=4))&&($board->commonborderbreached==false))
+			{	return 7013;	}	//WarBorder Not broken. Inside own warzone. Not jumping.
+			else if(  (($piece->color==1) && ($ending_square->rank<=4) &&($piece->square->rank<=4))&&($board->commonborderbreached==true))
+			{	return 7014;	}	//WarBorder already broken. Inside own warzone. Not jumping.
+			else if(  (($piece->color==2) && ($ending_square->rank>=5) &&($piece->square->rank>=5))&&($board->commonborderbreached==false))
+			{	return 7023;	}	//WarBorder Not broken. Inside own warzone. Not jumping.
+			else if(  (($piece->color==2) && ($ending_square->rank>=5) &&($piece->square->rank>=5))&&($board->commonborderbreached==true))
+			{	return 7024;	}	//WarBorder already broken. Inside own warzone. Not jumping.
+
+			else if(  (($piece->color==1) && ($ending_square->rank<5) &&($piece->square->rank>=5))&&($board->commonborderbreached==false))
+			{	return 7015;	} //WarBorder Not broken. Jumping from opponent Warzone to own warzone. Cannot jump.
+			else if(  (($piece->color==1) && ($ending_square->rank<5) &&($piece->square->rank>=5))&&($board->commonborderbreached==true))
+			{	return 7016;	} //WarBorder already broken. Jumping from opponent Warzone to own warzone.	Can jump.
+			else if((($piece->color==1) && ($ending_square->rank>4) &&($piece->square->rank<=4)) && ($board->commonborderbreached==false))
+			{	return 7025;	} //WarBorder Not broken. Jumping from own warzone to opponent warzone. Cannot jump.
+			else if((($piece->color==1) && ($ending_square->rank>4) &&($piece->square->rank<=4)) && ($board->commonborderbreached==true))
+			{	return 7026;	} //WarBorder already broken. Jumping from own Warzone to opponent warzone. Can jump.
+			
+			else if(  (($piece->color==2) && ($ending_square->rank<=4) &&($piece->square->rank<=4))&&($board->commonborderbreached==false))
+			{	return 7027;	} //WarBorder Not broken. Jumping from opponent Warzone to own warzone. Cannot jump.
+			else if(  (($piece->color==2) && ($ending_square->rank<=4) &&($piece->square->rank<=4))&&($board->commonborderbreached==true))
+			{	return 7028;	} //WarBorder already broken. Jumping from opponent Warzone to own warzone.	Can jump.		
+			else if(  (($piece->color==1) && ($ending_square->rank>=5) &&($piece->square->rank>=5))&&($board->commonborderbreached==false))
+			{	return 7017;	} //WarBorder Not broken. Jumping from own warzone to opponent warzone. Cannot jump.
+			else if(  (($piece->color==1) && ($ending_square->rank>=5) &&($piece->square->rank>=5))&&($board->commonborderbreached==true))
+			{	return 7018;	} //WarBorder already broken. Jumping from own Warzone to opponent warzone. Can jump.
+
+		}
+else 
+if(($piece->type!=8)&&( $elevatedstatus==true)) {
+	if((($piece->color==1) && ($ending_square->rank>4) &&($piece->square->rank<=4)) && ($board->commonborderbreached==false))
+	{	return 911;	} //WarBorder Not broken. Inside different warzone. Can jump.
+	else if((($piece->color==1) && ($ending_square->rank>4) &&($piece->square->rank<=4)) && ($board->commonborderbreached==true))
+	{	return 912;	} //WarBorder already broken. Inside different warzone. Can jump.
+	else if(  (($piece->color==2) && ($ending_square->rank<5) &&($piece->square->rank>=5))&&($board->commonborderbreached==false))
+	{	return 921; }  //WarBorder Not broken. Inside different warzone.  Can jump.
+	else if(  (($piece->color==2) && ($ending_square->rank<5) &&($piece->square->rank>=5))&&($board->commonborderbreached==true))
+	{	return 922; }	//WarBorder already broken. Inside different warzone. Can jump.
+
+	else if(  (($piece->color==1) && ($ending_square->rank<=4) &&($piece->square->rank<=4))&&($board->commonborderbreached==false))
+	{	return 913; }	//WarBorder Not broken. Inside own warzone. Not jumping.
+	else if(  (($piece->color==1) && ($ending_square->rank<=4) &&($piece->square->rank<=4))&&($board->commonborderbreached==true))
+	{	return 914; }	//WarBorder already broken. Inside own warzone. Not jumping.				
+	else if(  (($piece->color==2) && ($ending_square->rank>=5) &&($piece->square->rank>=5))&&($board->commonborderbreached==false))
+	{ 	return 923;	}	//WarBorder Not broken. Inside own warzone. Not jumping.
+	else if(  (($piece->color==2) && ($ending_square->rank>=5) &&($piece->square->rank>=5))&&($board->commonborderbreached==true))
+	{	return 924;	}	//WarBorder already broken. Inside own warzone. Not jumping.	
+
+	else if(  (($piece->color==1) && ($ending_square->rank<5) &&($piece->square->rank>=5))&&($board->commonborderbreached==false))
+	{	return 915;	} //WarBorder Not broken. Jumping from opponent Warzone to own warzone. Can jump.
+	else if(  (($piece->color==1) && ($ending_square->rank<5) &&($piece->square->rank>=5))&&($board->commonborderbreached==true))
+	{	return 916;	} //WarBorder already broken. Jumping from opponent Warzone to own warzone. Can jump.			
+	else if((($piece->color==1) && ($ending_square->rank>4) &&($piece->square->rank<=4)) && ($board->commonborderbreached==false))
+	{	return 925;	} //WarBorder Not broken. Jumping from opponent Warzone to own warzone. Can jump.
+	else if((($piece->color==1) && ($ending_square->rank>4) &&($piece->square->rank<=4)) && ($board->commonborderbreached==true))
+	{	return 926;	}  //WarBorder already broken. Jumping from opponent Warzone to own warzone. Can jump.
+	
+	else if(  (($piece->color==2) && ($ending_square->rank<=4) &&($piece->square->rank<=4))&&($board->commonborderbreached==false))
+	{	return 927; } //WarBorder Not broken. Jumping from opponent Warzone to own warzone. Can jump.
+	else if(  (($piece->color==2) && ($ending_square->rank<=4) &&($piece->square->rank<=4))&&($board->commonborderbreached==true))
+	{	return 928;	} //WarBorder already broken. Jumping from opponent Warzone to own warzone. Can jump							
+	else if(  (($piece->color==1) && ($ending_square->rank>=5) &&($piece->square->rank>=5))&&($board->commonborderbreached==false))
+	{	return 917;	} //WarBorder Not broken. Jumping from opponent Warzone to own warzone. Can jump.
+	else if(  (($piece->color==1) && ($ending_square->rank>=5) &&($piece->square->rank>=5))&&($board->commonborderbreached==true))
+	{	return 918;	} //WarBorder already broken. Jumping from opponent Warzone to own warzone. Can jump
+
+
+}
+else 
+if(($piece->type!=8)&&( $elevatedstatus==false)) {
+	if((($piece->color==1) && ($ending_square->rank>4) &&($piece->square->rank<=4)) && ($board->commonborderbreached==false))
+	{	return 9011;	} //WarBorder Not broken. Inside different warzone. Cannot jump.
+	else if((($piece->color==1) && ($ending_square->rank>4) &&($piece->square->rank<=4)) && ($board->commonborderbreached==true))
+	{	return 9012;	} //WarBorder already broken. Inside different warzone. Can jump.
+	else if(  (($piece->color==2) && ($ending_square->rank<5) &&($piece->square->rank>=5))&&($board->commonborderbreached==false))
+	{	return 9021; } //WarBorder Not broken. Inside Own warzone.  Cannot jump.
+	else if(  (($piece->color==2) && ($ending_square->rank<5) &&($piece->square->rank>=5))&&($board->commonborderbreached==true))
+	{	return 9022; }	//WarBorder already broken. Inside Own warzone.  Can jump.		
+
+	else if(  (($piece->color==1) && ($ending_square->rank<=4) &&($piece->square->rank<=4))&&($board->commonborderbreached==false))
+	{	return 9013; }	//WarBorder Not broken. Inside own warzone. Not jumping.
+	else if(  (($piece->color==1) && ($ending_square->rank<=4) &&($piece->square->rank<=4))&&($board->commonborderbreached==true))
+	{	return 9014; } //WarBorder already broken. Inside own warzone. Not jumping.				
+	else if(  (($piece->color==2) && ($ending_square->rank>=5) &&($piece->square->rank>=5))&&($board->commonborderbreached==false))
+	{ 	return 9023;	}	//WarBorder Not broken. Inside own warzone. Not jumping.
+	else if(  (($piece->color==2) && ($ending_square->rank>=5) &&($piece->square->rank>=5))&&($board->commonborderbreached==true))
+	{	return 9024;	}	//WarBorder already broken. Inside own warzone. Not jumping.	
+
+	else if(  (($piece->color==1) && ($ending_square->rank<5) &&($piece->square->rank>=5))&&($board->commonborderbreached==false))
+	{	return 9015;	}  //WarBorder Not broken. Jumping from opponent Warzone to own warzone. Cannot jump.
+	else if(  (($piece->color==1) && ($ending_square->rank<5) &&($piece->square->rank>=5))&&($board->commonborderbreached==true))
+	{	return 9016;	} //WarBorder already broken. Jumping from opponent Warzone to own warzone.	Can jump.
+	else if((($piece->color==1) && ($ending_square->rank>4) &&($piece->square->rank<=4)) && ($board->commonborderbreached==false))
+	{	return 9025;	} //WarBorder Not broken. Jumping from own warzone to opponent warzone. Cannot jump.
+	else if((($piece->color==1) && ($ending_square->rank>4) &&($piece->square->rank<=4)) && ($board->commonborderbreached==true))
+	{	return 9026;	}  //WarBorder already broken. Jumping from own Warzone to opponent warzone. Can jump.
+	
+	else if(  (($piece->color==2) && ($ending_square->rank<=4) &&($piece->square->rank<=4))&&($board->commonborderbreached==false))
+	{	return 9027; }	//WarBorder Not broken. Jumping from opponent Warzone to own warzone. Cannot jump.
+	else if(  (($piece->color==2) && ($ending_square->rank<=4) &&($piece->square->rank<=4))&&($board->commonborderbreached==true))
+	{	return 9028;	}	//WarBorder already broken. Jumping from opponent Warzone to own warzone.	Can jump.					
+	else if(  (($piece->color==1) && ($ending_square->rank>=5) &&($piece->square->rank>=5))&&($board->commonborderbreached==false))
+	{	return 9017;	}	//WarBorder Not broken. Jumping from own warzone to opponent warzone. Cannot jump.
+	else if(  (($piece->color==1) && ($ending_square->rank>=5) &&($piece->square->rank>=5))&&($board->commonborderbreached==true))
+	{	return 9018;	}  //WarBorder already broken. Jumping from own Warzone to opponent warzone. Can jump.
+
+}
+{return 0;}
+	}
+
+	//Army can retreat as per King or Generals Order
 	static function get_CastleBorderOpen_Status(
 		ChessPiece $piece,
 		$color_to_move,
@@ -2912,7 +3347,7 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 			}
 
 			if($ksquare!=null) {	
-				if((($piece->group=="OFFICER") ||($piece->group=="SOLDIER"))&&(($ksquare->file==0)||($ksquare->file==9))&&($ksquare->rank>=1)&&($ksquare->rank<=8))
+				if((($piece->group=="OFFICER") ||($piece->group=="SOLDIER"))&&(( $board->board[$ksquare->rank][$ksquare->file]->type==2) ||   (($ksquare->file==0)||($ksquare->file==9))&&($ksquare->rank>=1)&&($ksquare->rank<=8)))
 				{
 					if($piece->color==1)
 						{
@@ -3283,7 +3718,7 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 	
 			/* $boolslide=TRUE; $ROYALp=FALSE; $candemote=FALSE; $dem=0; $tempDirection=null; $mtype=1;
 			$generalaccessiblerow=-1;$movesA=[]; */
-			$lastaccessiblerow=-1;$cankill=0;$get_FullMover=true;$new_move=null;$opponent_refuged=false;
+			$lastaccessiblerow=-1;$cankill=0;$get_FullMover=true;$new_move=null;$opponent_refuged=false;$self_refuged=false;
 			$CommonBorderOpen_Status=-1;
 			$capture = FALSE;;$unsecured=false;
 			$moves1=[];
@@ -3300,7 +3735,16 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 					$naarad_neutralized=true; // naarad gets impacted by the royal king, spy or minister
 				}
 			}
+			else if($board->commonborderbreached==false)
+			{
+				$naarad_neutralized=true;
+			}
 		
+			//both naarad neutralized
+			if(($naarad_neutralized==false) &&(($board->blackcankill==false) || ($board->whitecankill==false)))
+			{
+				$naarad_neutralized=true;
+			}
 			/*piece is trapped in palace and has no royal help.
 			if(  ((($piece->square->rank==0) || ($piece->square->rank==9)) && (($piece->square->file==4) || ($piece->square->file==5)) )
 			||  ((($piece->square->rank==4) || ($piece->square->rank==5)) && (($piece->square->file==0) || ($piece->square->file==9))  ))
@@ -3319,17 +3763,25 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 			/* End new code added for sleepin p[ieces */
 			if($board->isCurrentZoneRoyal==true) {$naarad_neutralized=true;$ROYAL_ROYALp=true;$officer_ROYALp=true;$ROYALp=true;}
 			else { $opponent_refuged=self::has_opponent_neighbours( self::KING_DIRECTIONS, $piece, 3-$color_to_move, $board );
+				$self_refuged=self::has_opponent_neighbours( self::KING_DIRECTIONS, $piece, $color_to_move, $board );
+
+				$board1=clone $board;
+				$board1->color_to_move=3-$color_to_move;
+			self::checkpinnedrefugees(3-$color_to_move,$board1, $piece->square,$piece->square);
 			self::checkpinnedrefugees($color_to_move,$board, $piece->square,$piece->square);
+
 			//self::checkpinnedrefugees(3-$color_to_move,$board, $piece->square,$piece->square);
 			}
 			
 			//Narad is powerful and can be moved.		//Moving the Narad 
-
-			if(($board->controller_color!=null) &(($controlled_move==false)&&($board->controller_color==$color_to_move)&&($board->controller_color==3-$color_to_move))){
+			/*
+			if(($board->controller_color!=null) &&(($controlled_move==false)&&($board->controller_color==$color_to_move)&&($board->controller_color==3-$color_to_move))){
 				return $moves;
-			}
+			} */
+
+			
 			if(($naarad_neutralized==false)){
-				//$spaces=2;
+				$spaces=1;
 				//$board->color=3-$color_to_move;
 				foreach ( $directions_list as $direction ) {
 					for ( $dli = 1; $dli <= $spaces; $dli++ ) {
@@ -3349,13 +3801,15 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 								break;
 								}
 	
-						if((($lastaccessiblerow!=-1)&&($color_to_move==2)&&($ending_square->rank<$lastaccessiblerow))||
-						(($lastaccessiblerow!=-1)&&($color_to_move==1)&&($ending_square->rank>$lastaccessiblerow))){
-							continue;
-						}
+								
+							if((($lastaccessiblerow!=-1)&&($color_to_move==2)&&($ending_square->rank<$lastaccessiblerow))||
+							(($lastaccessiblerow!=-1)&&($color_to_move==1)&&($ending_square->rank>$lastaccessiblerow))){
+								continue;
+								}
 							$new_move=null;
 							$new_move = new ChessMove( $piece->square, $ending_square,$ending_square, 1, $piece->color, $piece->type, $capture, $board, $store_board_in_moves, false ,$controlled_move,$CommonBorderOpen_Status);
-
+							$moves [] = $new_move;
+							/*
 							$move2 = clone $new_move;
 							$move2->PinnedBRefugees=[]; $move2->PinnedWRefugees=[];
 							$move2->board->PinnedBRefugees=[]; $move2->board->PinnedWRefugees=[];
@@ -3426,30 +3880,38 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 								}
 							}
 							//break;
+							*/
 						}
-					/*if(($unsecured==false) && ($new_move!=null))
-						{	$move2 = clone $new_move;
-							$moves[] = $move2;
-						}*/
 				}
 			}
+			
 
 			//Narad has no refugee hence can free run
-			if($opponent_refuged==false){
-				$moves = self::add_slide_and_slidecapture_moves_to_moves_list(self::BISHOP_DIRECTIONS, $spaces, $moves, $piece, $color_to_move, $board, $store_board_in_moves,0,0,$get_FullMover,$selfbrokencastle,$foebrokencastle,$get_CASTLEMover,False);
-				$moves = self::add_slide_and_slidecapture_moves_to_moves_list(self::ROOK_DIRECTIONS,$spaces, $moves, $piece, $color_to_move, $board, $store_board_in_moves,0,0,$get_FullMover,$selfbrokencastle,$foebrokencastle,$get_CASTLEMover,False);
-			}
+			/* //if(($opponent_refuged==false)||($self_refuged==false))
+			{
+				$spaces=1;
+				if($spaces==1){
+					$moves = self::add_slide_moves_to_moves_list(self::PAWN_DIRECTIONS, 1, $moves, $piece, $color_to_move, $board, $store_board_in_moves,false,$selfbrokencastle,$foebrokencastle);
+
+					}
+				else
+					$moves = self::add_slide_and_slidecapture_moves_to_moves_list(self::BISHOP_DIRECTIONS, $spaces, $moves, $piece, $color_to_move, $board, $store_board_in_moves,0,0,$get_FullMover,$selfbrokencastle,$foebrokencastle,$get_CASTLEMover,False);
+				//$moves = self::add_slide_and_slidecapture_moves_to_moves_list(self::ROOK_DIRECTIONS,$spaces, $moves, $piece, $color_to_move, $board, $store_board_in_moves,0,0,$get_FullMover,$selfbrokencastle,$foebrokencastle,$get_CASTLEMover,False);
+			}*/
 			//Moving the pinned pieces and then its own pieces
 			//$board->color_to_move=$color_to_move;
 
 			$jumpstyle='3';$get_Killing_Allowed=0;
 
+				/*
 				if($color_to_move==1) {
 					$naaradblocks =sizeof($board->PinnedBRefugees);
 				}
 				else if($color_to_move==2) {
 					$naaradblocks =sizeof($board->PinnedWRefugees);
-				}
+				}*/
+
+				$naaradblocks =sizeof($board->PinnedBRefugees)+	sizeof($board->PinnedWRefugees);
 				
 				$naaradcolor= $color_to_move;
 				$rank=null; $file=null; 
@@ -3461,16 +3923,25 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 					$board,	$store_board_in_moves, TRUE,$controlled_move,$CommonBorderOpen_Status);
 
 				for ( $k = 0; $k < $naaradblocks; $k++ ) {
-					if(($naaradcolor==1) &&($board->PinnedBRefugees!=null)&&($board->PinnedBRefugees[$k]!=null)) {
-						$rank=$board->PinnedBRefugees[$k]->square->rank;
-						$file=$board->PinnedBRefugees[$k]->square->file;
+					if(($naaradcolor==2) &&($board->PinnedBRefugees!=null)&&($board->PinnedBRefugees[$k]!=null)) {
+
+						if($naaradcolor!=$board->PinnedBRefugees[$k]->color){
+							$rank=$board->PinnedBRefugees[$k]->square->rank;
+							$file=$board->PinnedBRefugees[$k]->square->file;
 						}
-					else if(($naaradcolor==2) &&($board->PinnedWRefugees!=null)&&($board->PinnedWRefugees[$k]!=null)) {
-						$rank=$board->PinnedWRefugees[$k]->square->rank;
-						$file=$board->PinnedWRefugees[$k]->square->file;
+						else continue;
 						}
-					
-					if(($rank!=null) && ($file!=null) &&  (($board->board[$rank][$file]!=null) && ($board->board[$rank][$file]->group=="OFFICER") && ($board->board[$rank][$file]))) {
+					else if(($naaradcolor==1) &&($board->PinnedWRefugees!=null)&&($board->PinnedWRefugees[$k]!=null)) {
+						if($naaradcolor!=$board->PinnedBRefugees[$k]->color){
+
+							$rank=$board->PinnedWRefugees[$k]->square->rank;
+							$file=$board->PinnedWRefugees[$k]->square->file;
+							}
+						else continue;
+						}
+				
+					if(($rank!=null) && ($file!=null) &&  (($board->board[$rank][$file]!=null) && (($board->board[$rank][$file]->group=="OFFICER") || ($board->board[$rank][$file]->group=="SOLDIER")) 
+						&& ($board->board[$rank][$file]))) {
 							$controlledpiece = clone $board->board[$rank][$file];
 							if($controlledpiece!=null){
 								$controlledpiece->striker=0;
@@ -3479,33 +3950,39 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 								$board->board[$rank][$file]->controlledpiece=true;
 								$board->color_to_move=$color_to_move;
 
-								if(($board->gametype>=1) && ($controlledpiece->group=="OFFICER")){
-									$get_FullMover=self::check_general_ROYAL_neighbours_promotion(self::KING_DIRECTIONS, $controlledpiece, $color_to_move, $board);
-									}
+									$get_FullMover=true;
+									$get_Killing_Allowed=0;
+									$canbepromoted=1;
+									/*
+									$moves = self::add_slide_and_slidecapture_moves_to_moves_list(self::GENERAL_DIRECTIONS, 2, $moves, $piece, $color_to_move, $board, $store_board_in_moves,$get_Killing_Allowed,1,$get_FullMover,$selfbrokencastle,$foebrokencastle,$get_CASTLEMover,FALSE);
 
+									static function add_slide_and_slidecapture_moves_to_moves_list(	array $directions_list,
+										int $spaces, array $moves, 	ChessPiece $piece, 	$color_to_move, ChessBoard $board, 	bool $store_board_in_moves, int $cankill, int $canbepromoted, 	bool $get_FullMover,
+										bool $selfbrokencastle,	bool $foebrokencastle,	int $get_CASTLEMover, bool $controlled_move	):
+										*/ 
 								if ($controlledpiece->type == ChessPiece::GENERAL) {
-									$moves1 = self::add_jump_and_jumpcapture_moves_to_moves_list(1,$jumpstyle,self::KNIGHT_DIRECTIONS, $moves1, $controlledpiece, $color_to_move, $board, $store_board_in_moves,$get_Killing_Allowed,0,$get_FullMover,$selfbrokencastle,$foebrokencastle,$get_CASTLEMover,TRUE);
-									$moves1 = self::add_slide_and_slidecapture_moves_to_moves_list(self::GENERAL_DIRECTIONS, 3, $moves1, $controlledpiece, $color_to_move, $board, $store_board_in_moves,0,0,$get_FullMover,$selfbrokencastle,$foebrokencastle,$get_CASTLEMover,TRUE);
+									$moves1 = self::add_jump_and_jumpcapture_moves_to_moves_list(1,$jumpstyle,self::KNIGHT_DIRECTIONS, $moves1, $controlledpiece, $color_to_move, $board, $store_board_in_moves,$get_Killing_Allowed,$canbepromoted,$get_FullMover,$selfbrokencastle,$foebrokencastle,$get_CASTLEMover,TRUE);
+									$moves1 = self::add_slide_and_slidecapture_moves_to_moves_list(self::GENERAL_DIRECTIONS, 3, $moves1, $controlledpiece, $color_to_move, $board, $store_board_in_moves,$get_Killing_Allowed,$canbepromoted,$get_FullMover,$selfbrokencastle,$foebrokencastle,$get_CASTLEMover,TRUE);
 								}
 								else if ($controlledpiece->type == ChessPiece::KNIGHT) {
 									//$moves1 = self::add_capture_moves_to_moves_list(self::GENERAL_DIRECTIONS, $moves1, $controlledpiece, $color_to_move, $board, $store_board_in_moves,0,$selfbrokencastle,$foebrokencastle);
-									$moves1 = self::add_jump_and_jumpcapture_moves_to_moves_list(1,$jumpstyle,self::KNIGHT_DIRECTIONS, $moves1, $controlledpiece, $color_to_move, $board, $store_board_in_moves,$get_Killing_Allowed,0,$get_FullMover,$selfbrokencastle,$foebrokencastle,$get_CASTLEMover,TRUE);
-									$moves1 = self::add_slide_and_slidecapture_moves_to_moves_list(self::GENERAL_DIRECTIONS, 2, $moves1, $controlledpiece, $color_to_move, $board, $store_board_in_moves,0,0,$get_FullMover,$selfbrokencastle,$foebrokencastle,$get_CASTLEMover,TRUE);
+									$moves1 = self::add_jump_and_jumpcapture_moves_to_moves_list(1,$jumpstyle,self::KNIGHT_DIRECTIONS, $moves1, $controlledpiece, $color_to_move, $board, $store_board_in_moves,$get_Killing_Allowed,$canbepromoted,$get_FullMover,$selfbrokencastle,$foebrokencastle,$get_CASTLEMover,TRUE);
+									$moves1 = self::add_slide_and_slidecapture_moves_to_moves_list(self::GENERAL_DIRECTIONS, 2, $moves1, $controlledpiece, $color_to_move, $board, $store_board_in_moves,$get_Killing_Allowed,$canbepromoted,$get_FullMover,$selfbrokencastle,$foebrokencastle,$get_CASTLEMover,TRUE);
 
 								}
 								else if (($controlledpiece->type == ChessPiece::BISHOP) &&($color_to_move==$controlledpiece->color)) {
 									if(($board->gametype==3))
-									$moves1 = self::add_slide_and_slidecapture_moves_to_moves_list(self::BISHOP_DIRECTIONS, 2, $moves1, $controlledpiece, $color_to_move, $board, $store_board_in_moves,0,0,$get_FullMover,$selfbrokencastle,$foebrokencastle,$get_CASTLEMover,TRUE);
+									$moves1 = self::add_slide_and_slidecapture_moves_to_moves_list(self::BISHOP_DIRECTIONS, 2, $moves1, $controlledpiece, $color_to_move, $board, $store_board_in_moves,$get_Killing_Allowed,$canbepromoted,$get_FullMover,$selfbrokencastle,$foebrokencastle,$get_CASTLEMover,TRUE);
 									else 
-									$moves1 = self::add_slide_and_slidecapture_moves_to_moves_list(self::GENERAL_DIRECTIONS, 2, $moves1, $controlledpiece, $color_to_move, $board, $store_board_in_moves,0,0,$get_FullMover,$selfbrokencastle,$foebrokencastle,$get_CASTLEMover,TRUE);
+									$moves1 = self::add_slide_and_slidecapture_moves_to_moves_list(self::GENERAL_DIRECTIONS, 2, $moves1, $controlledpiece, $color_to_move, $board, $store_board_in_moves,$get_Killing_Allowed,$canbepromoted,$get_FullMover,$selfbrokencastle,$foebrokencastle,$get_CASTLEMover,TRUE);
 
 								}
 								else if (($controlledpiece->type == ChessPiece::ROOK) &&($color_to_move==$controlledpiece->color)) {
-									$moves1 = self::add_slide_and_slidecapture_moves_to_moves_list(self::GENERAL_DIRECTIONS, 3, $moves1, $controlledpiece, $color_to_move, $board, $store_board_in_moves,0,0,$get_FullMover,$selfbrokencastle,$foebrokencastle,$get_CASTLEMover,TRUE);
+									$moves1 = self::add_slide_and_slidecapture_moves_to_moves_list(self::GENERAL_DIRECTIONS, 3, $moves1, $controlledpiece, $color_to_move, $board, $store_board_in_moves,$get_Killing_Allowed,$canbepromoted,$get_FullMover,$selfbrokencastle,$foebrokencastle,$get_CASTLEMover,TRUE);
 						
 								}
 								else if ($controlledpiece->type == ChessPiece::PAWN) {
-									$moves1 = self::add_slide_and_slidecapture_moves_to_moves_list(self::KING_DIRECTIONS, 1, $moves1, $piece, $color_to_move, $board, $store_board_in_moves,0,0,false,$selfbrokencastle,$foebrokencastle,$get_CASTLEMover,TRUE);
+									$moves1 = self::add_slide_and_slidecapture_moves_to_moves_list(self::KING_DIRECTIONS, 1, $moves1, $piece, $color_to_move, $board, $store_board_in_moves,$get_Killing_Allowed,$canbepromoted,false,$selfbrokencastle,$foebrokencastle,$get_CASTLEMover,TRUE);
 								}
 							}
 						}
@@ -3572,7 +4049,7 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 		bool $controlled_move
 	): array {
 
-		$ROYALp=FALSE; $candemote=FALSE; $capture = FALSE; $dem=0; $tempDirection=null; 
+		$ROYALp=FALSE; $ROYAL_ROYALp=false;$StartPiece_RoyalTouch=false;$candemote=FALSE; $capture = FALSE; $dem=0; $tempDirection=null; 
 		$CommonBorderOpen_Status=-1;
 		if($board->gametype<=2)
 			$mtype=1;//slide //2 jump 
@@ -3682,13 +4159,40 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 							$board->board[$piece->square->rank] [$piece->square->file]->awake=true;
 							$ROYAL_ROYALp==true;
 						}
+						else if( (($piece->square->rank==0)&&($piece->square->file==4) && ($board->board[0][5]!=null) && ($board->board[0][5]->awake==true) && (($board->board[0][5]->type==ChessPiece::GENERAL)  || ($board->board[0][5]->group=='ROYAL') ||($board->board[0][5]->group=='SEMIROYAL')) ) ||
+						(($piece->square->rank==0)&&($piece->square->file==5) && ($board->board[0][4]!=null) && ($board->board[0][4]->awake==true) && (($board->board[0][4]->type==ChessPiece::GENERAL) || ($board->board[0][4]->group=='ROYAL') ||($board->board[0][4]->group=='SEMIROYAL')) )||
+						(($piece->square->rank==9)&&($piece->square->file==4) && ($board->board[9][5]!=null) && ($board->board[9][5]->awake==true)  && (($board->board[9][5]->type==ChessPiece::GENERAL) || ($board->board[9][5]->group=='ROYAL') ||($board->board[9][5]->group=='SEMIROYAL')) )||
+						(($piece->square->rank==9)&&($piece->square->file==5) && ($board->board[9][4]!=null) && ($board->board[9][4]->awake==true)  && (($board->board[9][4]->type==ChessPiece::GENERAL) || ($board->board[9][4]->group=='ROYAL') ||($board->board[9][4]->group=='SEMIROYAL')) ) ||
+	
+						(($piece->square->file==0)&&($piece->square->rank==4) && ($board->board[5][0]!=null) && ($board->board[5][0]->awake==true)  && (($board->board[5][0]->type==ChessPiece::GENERAL) || ($board->board[5][0]->group=='ROYAL') ||($board->board[5][0]->group=='SEMIROYAL')) ) ||
+						(($piece->square->file==0)&&($piece->square->rank==5) && ($board->board[4][0]!=null) && ($board->board[4][0]->awake==true) && (($board->board[4][0]->type==ChessPiece::GENERAL) || ($board->board[4][0]->group=='ROYAL') ||($board->board[4][0]->group=='SEMIROYAL')) )||
+						(($piece->square->file==9)&&($piece->square->rank==4) && ($board->board[5][9]!=null) && ($board->board[5][9]->awake==true) && (($board->board[5][9]->type==ChessPiece::GENERAL) || ($board->board[5][9]->group=='ROYAL') ||($board->board[5][9]->group=='SEMIROYAL')) )||
+						(($piece->square->file==9)&&($piece->square->rank==5) && ($board->board[4][9]!=null) && ($board->board[4][9]->awake==true) && (($board->board[4][9]->type==ChessPiece::GENERAL) || ($board->board[4][9]->group=='ROYAL') ||($board->board[4][9]->group=='SEMIROYAL')) )
+							
+
+						){
+							$board->board[$piece->square->rank] [$piece->square->file]->awake=true;
+							$ROYAL_ROYALp==true;
+						}
+
+
+
 						else if(($ROYAL_ROYALp==false))
 						{
 							return $moves;//
 		
 						}
 					}
-		
+							//piece is trapped in palace and has no royal help.
+					else if(  (($piece->group=='ROYAL') || ($piece->group=='SEMIROYAL')||($piece->type==ChessPiece::GENERAL)) && 
+					(((($piece->square->rank==0) || ($piece->square->rank==9)) && (($piece->square->file==6) || ($piece->square->file==3)) )
+							||   ((($piece->square->rank==6) || ($piece->square->rank==3)) && (($piece->square->file==0) || ($piece->square->file==9)))  ))
+							{
+				
+									$ROYAL_ROYALp==true;
+							
+							}
+				
 					else if(  ((($piece->square->rank==4) || ($piece->square->rank==5)) && (($piece->square->file==4) || ($piece->square->file==5)) )
 					||  ((($piece->square->rank==4) || ($piece->square->rank==5)) && (($piece->square->file==4) || ($piece->square->file==5))  ))
 					{
@@ -3832,7 +4336,7 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 
 				}
 				else if(($piece->square->rank==6) && ( 
-					(($piece->square->file==0) && ($board->board[5][0]=null))
+					(($piece->square->file==0) && ($board->board[5][0]==null))
 				||(($piece->square->file==9) && ($board->board[5][9]!=null))
 				)){
 
@@ -4175,6 +4679,10 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 										break;
 									}	
 
+								if( (( $piece->square->file==0) && ($ending_square->file>1)) || (( $piece->square->file==9) && ($ending_square->file<8)))
+								{ 
+									break;
+								}
 									
 								/*if( (($selfbrokencastle==true)&&( $piece->square->rank==9)&&($ending_square->rank<8)&&($color_to_move==2)||
 								($foebrokencastle==true)&&($ending_square->rank>1)&&($piece->square->rank==0)&&($color_to_move==2))||  
@@ -4223,34 +4731,24 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 										}
 							}
 							*/
+							$elavatedstatus=false;
+
+							if (($ROYAL_ROYALp==true) && (strpos($piece->group,"ROYAL")!==FALSE))
+								$elavatedstatus=$ROYAL_ROYALp;
+							else if (($ROYAL_ROYALp==true) && (strpos($piece->group,"OFFICER")!==FALSE))
+								$elavatedstatus=$ROYAL_ROYALp;							
+							else if (($StartPiece_PromotionalTouch==true) && (strpos($piece->group,"ROYAL")===FALSE))
+								$elavatedstatus=$StartPiece_PromotionalTouch;
+							else $elavatedstatus=false;
 
 							/* Check if border breached */
-							$CommonBorderOpen_Status = self::get_CommonBorderOpen_Status(	$piece, $color_to_move, $board,$ending_square );
-							if(($CommonBorderOpen_Status==0)){
-									if (  ($StartPiece_PromotionalTouch==false)&& ($ROYAL_ROYALp==false) && ($piece->type!=ChessPiece::GODMAN) ){
-											break;
-									}
-									else if ((($ROYAL_ROYALp==true) ||  ($StartPiece_PromotionalTouch==true)) && ($piece->type!=ChessPiece::GODMAN) ){
-										if ($board->board[$ending_square->rank][$ending_square->file]) {
-											$CommonBorderOpen_Status=1;
-											break;
-										}
+							$CommonBorderOpen_Status = self::get_CommonBorderOpen_Status_(	$piece, $color_to_move, $board,$ending_square,$elavatedstatus );
 
-										if (($board->board[$ending_square->rank][$ending_square->file]==null) &&(abs($ending_square->rank-$piece->square->rank)>=1) 
-										&&($ending_square->file!=$piece->square->file)&& ($piece->square->file>0)&&($piece->square->file<9))  {
-											$CommonBorderOpen_Status=1;
-											if( (($ending_square->rank==5)&&($piece->square->rank<5)) || (($ending_square->rank==4)&&($piece->square->rank>4)))
-											{}
-											else
-												break;
-										}
+							if(($CommonBorderOpen_Status== 7011) || ($CommonBorderOpen_Status== 7021) || ($CommonBorderOpen_Status== 7015) || ($CommonBorderOpen_Status== 7025) || 
+							($CommonBorderOpen_Status== 7027) || ($CommonBorderOpen_Status== 7017)){break;}
 
-										$CommonBorderOpen_Status=1;
-									}
-									else if (($piece->type==ChessPiece::GODMAN)){
-											$CommonBorderOpen_Status=0;					
-										}
-								}
+							else if(($CommonBorderOpen_Status== 9011) || ($CommonBorderOpen_Status== 9021) || ($CommonBorderOpen_Status== 9015) || ($CommonBorderOpen_Status== 9025) || 
+							($CommonBorderOpen_Status== 9027) || ($CommonBorderOpen_Status== 9017)){break;}
 
 							/* Check if border breached */
 
@@ -4615,10 +5113,7 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 													///	* Classical General can penetrate the CASTLE. //
 													$board1= clone $board;
 	
-													if(($CommonBorderOpen_Status == 1)){
-														$board1->commonborderbreached=true;
-													}
-													
+										
 													if(($ending_square->rank==0) && ($piece->color==2)){
 														$board1->wbrokencastle=true;
 													}
@@ -4710,9 +5205,8 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 														$color_to_move,
 														$board
 													);
-												if(($ROYALp==false) && (($piece->group=='SOLDIER')||($piece->group=='OFFICER')))
-													continue;
-												else if(($ROYALp==false) && (($piece->group=='ROYAL')||($piece->group=='SEMIROYAL')))
+								
+												 if(($ROYALp==false) && ($ROYAL_ROYALp==false) && (($piece->group=='ROYAL')||($piece->group=='SEMIROYAL')||($piece->type==ChessPiece::GENERAL)))
 													{														
 														if( (($piece->square->file==0) && ($ending_square->file>=1)) ||
 														(($piece->square->file==9) && ($ending_square->file<=8)) ||
@@ -4727,7 +5221,10 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 														){
 															break;
 														}	
-													};
+													}
+												else if(($ROYALp==false) && ($ROYAL_ROYALp==false) && (($piece->group=='SOLDIER')||($piece->group=='OFFICER')))
+													continue;
+																				
 											}
 										}
 									
@@ -4755,7 +5252,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 												if($piece->type==12)  $dem=-5; 
 												else $dem=1;
 												$candemote=$board->checkdemotionparity( $board->export_fen(), $piece,$color_to_move,$board);
-												$CommonBorderOpen_Status = self::get_CommonBorderOpen_Status(	$piece, $color_to_move, $board,$ending_square );
 
 												if($candemote==TRUE){// then update the parity with new demoted values
 												//$piece->type=$piece->type+1;
@@ -5807,7 +6303,7 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 													
 													}
 													else if(($piece->square->rank==6) && ( 
-														(($piece->square->file==0) && ($board->board[5][0]=null))
+														(($piece->square->file==0) && ($board->board[5][0]==null))
 													||(($piece->square->file==9) && ($board->board[5][9]!=null))
 													)){
 													
@@ -5928,23 +6424,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 								else if(($controlled_move==false))
 								{
 
-									$CommonBorderOpen_Status = self::get_CommonBorderOpen_Status(	$piece, $color_to_move, $board,$ending_square );
-
-									if(($CommonBorderOpen_Status==0)){
-										if ((($ROYAL_ROYALp==false) && ($StartPiece_PromotionalTouch==false)) && ($piece->type!=ChessPiece::GODMAN) ){
-												break;
-										}
-										else if ((($ROYAL_ROYALp==true) || ($StartPiece_PromotionalTouch)) && ($piece->type!=ChessPiece::GODMAN) ){
-											if ($board->board[$ending_square->rank][$ending_square->file]) {
-												$CommonBorderOpen_Status=1;
-												break;
-											}
-											$CommonBorderOpen_Status=1;
-										}
-										else if (($piece->type==ChessPiece::GODMAN)){
-												$CommonBorderOpen_Status=0;					
-											}
-									}
 
 									if(($capture==true) && ($ending_square->mediatorrank!=null)&&($ending_square->mediatorfile!=null)){
 										$mediatorpiece = clone $piece;
@@ -5991,35 +6470,18 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 											//continue;
 									}
 									else {
-										//y$new_move1 = new ChessMove( $piece->square, $ending_square,$ending_square, -1, $piece->color, $piece->type, $capture, $board, $store_board_in_moves, false);
-										//$move2 = clone $new_move1;
-										//$moves[] = 	$move2;
+										$new_move1 = new ChessMove(
+											$piece->square, $ending_square,$ending_square,
+											0,
+											$piece->color, $piece->type,
+											$capture, $board, $store_board_in_moves,
+											false,$controlled_move,$CommonBorderOpen_Status
+										);										
+										
+										$move2 = clone $new_move1;
+										$moves[] = 	$move2;
 										/* Check if border breached */
 										$board1 = clone $board;
-
-										if(($CommonBorderOpen_Status==0)){
-											if (($ROYAL_ROYALp==false) && ($piece->type!=ChessPiece::GODMAN) ){
-													continue;
-											}
-											else if (($ROYAL_ROYALp==true) && ($piece->type!=ChessPiece::GODMAN) ){
-												if ($board->board[$ending_square->rank][$ending_square->file]) {
-													$CommonBorderOpen_Status=1;
-													break;
-												}											
-												$CommonBorderOpen_Status=1;
-											}
-											else if (($piece->type==ChessPiece::GODMAN)){
-													$CommonBorderOpen_Status=0;					
-												}
-										}
-		
-										/* Check if border breached */
-
-										if(($CommonBorderOpen_Status == 1)){
-											$board1->commonborderbreached=true;
-											$board1->CommonBorderOpen_Status=1;
-										}
-
 
 										$targetpiece=clone $piece;
 										$targetpiece->square->file=	$ending_square->file;
@@ -6079,6 +6541,7 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 											}
 										}
 										
+
 										$new_move = new ChessMove(
 											$piece->square, $ending_square,$ending_square,
 											0,
@@ -6092,28 +6555,7 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 										if(($capture==TRUE)&&( ($board->get_king_square(abs($color_to_move-3))->rank==$ending_square->rank) &&($board->get_king_square(abs($color_to_move-3))->file==$ending_square->file)))
 											$new_move->set_killed_king(TRUE);
 										$moves[] = $new_move;
-
-										if(($CommonBorderOpen_Status==1) && ($piece->type==ChessPiece::SPY) ){
-												//spy is jumping the border
-												$board1->commonborderbreached=false;
-												$new_move = new ChessMove(
-													$piece->square, $ending_square,$ending_square,
-													0,
-													$piece->color, $piece->type,
-													$capture, $board1, $store_board_in_moves,
-													false,$controlled_move,-1
-												);										
-
-												//check if the king is killed
-												if(($capture==TRUE)&&( ($board->get_king_square(abs($color_to_move-3))->rank==$ending_square->rank) &&($board->get_king_square(abs($color_to_move-3))->file==$ending_square->file)))
-													$new_move->set_killed_king(TRUE);
-												$moves[] = $new_move;
-											}							
-
-											else if(($CommonBorderOpen_Status==1) && ( ($piece->group=="SOLDIER") ||($piece->group=="OFFICER") )){
-												break;
-											}
-
+						
 										}
 								}
 							}
@@ -6236,7 +6678,7 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 										
 										}
 										else if(($piece->square->rank==6) && ( 
-											(($piece->square->file==0) && ($board->board[5][0]=null))
+											(($piece->square->file==0) && ($board->board[5][0]==null))
 										||(($piece->square->file==9) && ($board->board[5][9]!=null))
 										)){
 										
@@ -6341,7 +6783,7 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 
 									}
 									else if(($piece->square->rank==6) && ( 
-										(($piece->square->file==0) && ($board->board[5][0]=null))
+										(($piece->square->file==0) && ($board->board[5][0]==null))
 									||(($piece->square->file==9) && ($board->board[5][9]!=null))
 									)){
 
@@ -7200,7 +7642,123 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 
 			$officer_ROYALp=false;
 			if($piece->type==13) {$tempstr="SEMIROYAL";} else {$tempstr="ALL";} 
-			$officer_ROYALp=self::has_ROYAL_neighbours( self::KING_DIRECTIONS, $piece->square, $piece->square, $color_to_move, $board, $tempstr );
+			
+			if($piece->type!=8) 
+				$officer_ROYALp=self::has_ROYAL_neighbours( self::KING_DIRECTIONS, $piece->square, $piece->square, $color_to_move, $board, $tempstr );
+
+
+
+
+
+
+
+				if(  ($piece->type==ChessPiece::PAWN) && (((($piece->square->rank==0) || ($piece->square->rank==9)) && (($piece->square->file==4) || ($piece->square->file==5)) )
+					||   ((($piece->square->rank==4) || ($piece->square->rank==5)) && (($piece->square->file==0) || ($piece->square->file==9)))  ))
+					{
+						$board->board[$piece->square->rank] [$piece->square->file]->awake=false;
+		
+						if( (($piece->square->rank==0)&&($piece->square->file==4) && ($board->board[0][3]!=null) && (($board->board[0][3]->type==ChessPiece::GENERAL)  || ($board->board[0][3]->group=='NOBLE') ||($board->board[0][3]->group=='SEMIROYAL')) ) ||
+						(($piece->square->rank==0)&&($piece->square->file==5) && ($board->board[0][6]!=null) && (($board->board[0][6]->type==ChessPiece::GENERAL) || ($board->board[0][6]->group=='NOBLE') ||($board->board[0][6]->group=='SEMIROYAL')) )||
+						(($piece->square->rank==9)&&($piece->square->file==4) && ($board->board[9][3]!=null) && (($board->board[9][3]->type==ChessPiece::GENERAL) || ($board->board[9][3]->group=='NOBLE') ||($board->board[9][3]->group=='SEMIROYAL')) )||
+						(($piece->square->rank==9)&&($piece->square->file==5) && ($board->board[9][6]!=null) && (($board->board[9][6]->type==ChessPiece::GENERAL) || ($board->board[9][6]->group=='NOBLE') ||($board->board[9][6]->group=='SEMIROYAL')) ) ||
+	
+						(($piece->square->file==0)&&($piece->square->rank==4) && ($board->board[3][0]!=null) && (($board->board[3][0]->type==ChessPiece::GENERAL) || ($board->board[3][0]->group=='NOBLE') ||($board->board[3][0]->group=='SEMIROYAL')) ) ||
+						(($piece->square->file==0)&&($piece->square->rank==5) && ($board->board[6][0]!=null) && (($board->board[6][0]->type==ChessPiece::GENERAL) || ($board->board[6][0]->group=='NOBLE') ||($board->board[6][0]->group=='SEMIROYAL')) )||
+						(($piece->square->file==9)&&($piece->square->rank==4) && ($board->board[3][9]!=null) && (($board->board[3][9]->type==ChessPiece::GENERAL) || ($board->board[3][9]->group=='NOBLE') ||($board->board[3][9]->group=='SEMIROYAL')) )||
+						(($piece->square->file==9)&&($piece->square->rank==5) && ($board->board[6][9]!=null) && (($board->board[6][9]->type==ChessPiece::GENERAL) || ($board->board[6][9]->group=='NOBLE') ||($board->board[6][9]->group=='SEMIROYAL')) )
+							
+
+						){
+							$board->board[$piece->square->rank] [$piece->square->file]->awake=true;
+							$officer_ROYALp==true;
+						}
+						else if( (($piece->square->rank==0)&&($piece->square->file==4) && ($board->board[0][5]!=null) && ($board->board[0][5]->awake==true) && (($board->board[0][5]->type==ChessPiece::GENERAL)  || ($board->board[0][5]->group=='NOBLE') ||($board->board[0][5]->group=='SEMIROYAL')) ) ||
+						(($piece->square->rank==0)&&($piece->square->file==5) && ($board->board[0][4]!=null) && ($board->board[0][4]->awake==true) && (($board->board[0][4]->type==ChessPiece::GENERAL) || ($board->board[0][4]->group=='NOBLE') ||($board->board[0][4]->group=='SEMIROYAL')) )||
+						(($piece->square->rank==9)&&($piece->square->file==4) && ($board->board[9][5]!=null) && ($board->board[9][5]->awake==true)  && (($board->board[9][5]->type==ChessPiece::GENERAL) || ($board->board[9][5]->group=='NOBLE') ||($board->board[9][5]->group=='SEMIROYAL')) )||
+						(($piece->square->rank==9)&&($piece->square->file==5) && ($board->board[9][4]!=null) && ($board->board[9][4]->awake==true)  && (($board->board[9][4]->type==ChessPiece::GENERAL) || ($board->board[9][4]->group=='NOBLE') ||($board->board[9][4]->group=='SEMIROYAL')) ) ||
+	
+						(($piece->square->file==0)&&($piece->square->rank==4) && ($board->board[5][0]!=null) && ($board->board[5][0]->awake==true)  && (($board->board[5][0]->type==ChessPiece::GENERAL) || ($board->board[5][0]->group=='NOBLE') ||($board->board[5][0]->group=='SEMIROYAL')) ) ||
+						(($piece->square->file==0)&&($piece->square->rank==5) && ($board->board[4][0]!=null) && ($board->board[4][0]->awake==true) && (($board->board[4][0]->type==ChessPiece::GENERAL) || ($board->board[4][0]->group=='NOBLE') ||($board->board[4][0]->group=='SEMIROYAL')) )||
+						(($piece->square->file==9)&&($piece->square->rank==4) && ($board->board[5][9]!=null) && ($board->board[5][9]->awake==true) && (($board->board[5][9]->type==ChessPiece::GENERAL) || ($board->board[5][9]->group=='NOBLE') ||($board->board[5][9]->group=='SEMIROYAL')) )||
+						(($piece->square->file==9)&&($piece->square->rank==5) && ($board->board[4][9]!=null) && ($board->board[4][9]->awake==true) && (($board->board[4][9]->type==ChessPiece::GENERAL) || ($board->board[4][9]->group=='NOBLE') ||($board->board[4][9]->group=='SEMIROYAL')) )
+							
+
+						){
+							$board->board[$piece->square->rank] [$piece->square->file]->awake=true;
+							$officer_ROYALp==true;
+						}
+
+
+
+						else if(($officer_ROYALp==false))
+						{
+							return $moves;//
+		
+						}
+					}
+				
+				else if( ($piece->type==ChessPiece::PAWN)&&  ((($piece->square->rank==4) || ($piece->square->rank==5)) && (($piece->square->file==4) || ($piece->square->file==5)) )
+					||  ((($piece->square->rank==4) || ($piece->square->rank==5)) && (($piece->square->file==4) || ($piece->square->file==5))  ))
+					{
+		
+						//add the logic to check if the warzone already broken palaces. commonborder
+						$board->board[$piece->square->rank] [$piece->square->file]->awake=false;
+		
+						if( ($piece->type!=ChessPiece::PAWN)&&(($piece->square->rank==4)&&($piece->square->file==4) && ( (($board->board[4][3]!==null) && ( ($board->board[4][3]->type==ChessPiece::GENERAL) ||  ($board->board[4][3]->group=='ROYAL') ||($board->board[4][3]->group=='SEMIROYAL') ))||
+						(($board->board[3][5]!==null) && ( ($board->board[3][5]->type==ChessPiece::GENERAL) ||  ($board->board[3][5]->group=='NOBLE') ||($board->board[3][5]->group=='SEMIROYAL') ))||
+						(($board->board[3][3]!==null) && ( ($board->board[3][3]->type==ChessPiece::GENERAL) ||  ($board->board[3][3]->group=='NOBLE') ||($board->board[3][3]->group=='SEMIROYAL') )) ||
+						(($board->board[3][4]!==null) && ( ($board->board[3][4]->type==ChessPiece::GENERAL) ||  ($board->board[3][4]->group=='NOBLE') ||($board->board[3][4]->group=='SEMIROYAL') ))
+
+						)) ||
+		
+						(($piece->square->rank==4)&&($piece->square->file==5) && ( (($board->board[4][6]!==null) && ( ($board->board[4][6]->type==ChessPiece::GENERAL) ||  ($board->board[4][6]->group=='ROYAL') ||($board->board[4][6]->group=='SEMIROYAL') ))||
+						(($board->board[3][6]!==null) && ( ($board->board[3][6]->type==ChessPiece::GENERAL) ||  ($board->board[3][6]->group=='NOBLE') ||($board->board[3][6]->group=='SEMIROYAL') )) ||
+						(($board->board[3][5]!==null) && ( ($board->board[3][5]->type==ChessPiece::GENERAL) ||  ($board->board[3][5]->group=='NOBLE') ||($board->board[3][5]->group=='SEMIROYAL') )) ||
+						(($board->board[3][4]!==null) && ( ($board->board[3][4]->type==ChessPiece::GENERAL) ||  ($board->board[3][4]->group=='NOBLE') ||($board->board[3][4]->group=='SEMIROYAL') ))
+		
+						)) ||
+		
+						(($piece->square->rank==5)&&($piece->square->file==4) && ( (($board->board[5][3]!==null) && ( ($board->board[5][3]->type==ChessPiece::GENERAL) ||  ($board->board[5][3]->group=='ROYAL') ||($board->board[5][3]->group=='SEMIROYAL') ))||
+						(($board->board[6][3]!==null) && ( ($board->board[6][3]->type==ChessPiece::GENERAL) ||  ($board->board[6][3]->group=='NOBLE') ||($board->board[6][3]->group=='SEMIROYAL') ))||
+						(($board->board[6][4]!==null) && ( ($board->board[6][4]->type==ChessPiece::GENERAL) ||  ($board->board[6][4]->group=='NOBLE') ||($board->board[6][4]->group=='SEMIROYAL') ))||
+						(($board->board[6][4]!==null) && ( ($board->board[6][5]->type==ChessPiece::GENERAL) ||  ($board->board[6][5]->group=='NOBLE') ||($board->board[6][5]->group=='SEMIROYAL') ))
+		
+						)) ||
+		
+						(($piece->square->rank==5)&&($piece->square->file==5) && ( (($board->board[6][4]!==null) && ( ($board->board[6][4]->type==ChessPiece::GENERAL) ||  ($board->board[6][4]->group=='ROYAL') ||($board->board[6][4]->group=='SEMIROYAL') ))||
+						(($board->board[6][5]!==null) && ( ($board->board[6][5]->type==ChessPiece::GENERAL) ||  ($board->board[6][5]->group=='NOBLE') ||($board->board[6][5]->group=='SEMIROYAL') ))||
+						(($board->board[6][6]!==null) && ( ($board->board[6][6]->type==ChessPiece::GENERAL) ||  ($board->board[6][6]->group=='NOBLE') ||($board->board[6][6]->group=='SEMIROYAL') ))||
+						(($board->board[5][6]!==null) && ( ($board->board[5][6]->type==ChessPiece::GENERAL) ||  ($board->board[5][6]->group=='NOBLE') ||($board->board[5][6]->group=='SEMIROYAL') ))
+						))){
+							$board->board[$piece->square->rank] [$piece->square->file]->awake=true;
+								$officer_ROYALp=true;
+						}
+						
+						if ((( $board->commonborderbreached == true ) && ( $board->CommonBorderOpen_Status==1)) &&
+						( ($piece->type!=ChessPiece::PAWN)&&(($piece->square->rank==4)&&($piece->square->file==4) && 
+						((($board->board[5][3]!==null) && ( ($board->board[5][3]->type==ChessPiece::GENERAL) ||  ($board->board[5][3]->group=='NOBLE') ||($board->board[5][3]->group=='SEMIROYAL') ))
+						)) ||
+		
+						(($piece->square->rank==4)&&($piece->square->file==5) && 
+						( (($board->board[5][6]!==null) && ( ($board->board[4][6]->type==ChessPiece::GENERAL) ||  ($board->board[5][6]->group=='NOBLE') ||($board->board[5][6]->group=='SEMIROYAL') ))		
+						)) ||
+		
+						(($piece->square->rank==5)&&($piece->square->file==4) && 
+						( (($board->board[4][3]!==null) && ( ($board->board[4][3]->type==ChessPiece::GENERAL) ||  ($board->board[4][3]->group=='NOBLE') ||($board->board[5][3]->group=='SEMIROYAL') ))		
+						)) ||
+		
+						(($piece->square->rank==5)&&($piece->square->file==5) && 
+						( (($board->board[4][6]!==null) && ( ($board->board[4][6]->type==ChessPiece::GENERAL) ||  ($board->board[4][6]->group=='NOBLE') ||($board->board[6][4]->group=='SEMIROYAL') ))
+						)))){
+							$board->board[$piece->square->rank] [$piece->square->file]->awake=true;
+								$officer_ROYALp=true;
+						}	
+						else if(($officer_ROYALp==false))
+						{
+							return $moves;//
+						}
+					}
+
 
 				//piece is trapped in palace and has no royal help.
 				if((($piece->type==13))&&  ((($piece->square->rank==0) || ($piece->square->rank==9)) && (($piece->square->file==4) || ($piece->square->file==5)) )
@@ -7245,10 +7803,9 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 				$piece->square->rank;
 			}
 
-			$officerp=self::check_officers_neighbours( self::KING_DIRECTIONS, $piece, $color_to_move, $board, 'include');
-
-			self::check_trapped_piece($piece,$color_to_move, $board,'exclude');
-
+			if($piece->type!=8){
+				$officerp=self::check_officers_neighbours( self::KING_DIRECTIONS, $piece, $color_to_move, $board, 'include');
+				self::check_trapped_piece($piece,$color_to_move, $board,'exclude');
 			/* Start new code added for sleepin p[ieces */
 
 			//Pieces inside CASTLE become Semi-Royal for the time-being.
@@ -7273,6 +7830,8 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 
 			}
 		
+
+
 			//piece is trapped in palace and has no royal help.
 			if(  ((($piece->square->rank==0) || ($piece->square->rank==9)) && (($piece->square->file==4) || ($piece->square->file==5)) )
 			||  ((($piece->square->rank==4) || ($piece->square->rank==5)) && (($piece->square->file==0) || ($piece->square->file==9))  ))
@@ -7282,9 +7841,39 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 			}
 
 			/* End new code added for sleepin p[ieces */
-
+			$canbepromoted=1;
 			if($piece->type==13) {$tempstr="SEMIROYAL";} else {$tempstr="ALL";} 
 			$officer_ROYALp=self::has_ROYAL_neighbours( self::KING_DIRECTIONS, $piece->square, $piece->square, $color_to_move, $board, $tempstr );
+
+
+			if(($piece->group=="OFFICER")&&($officer_ROYALp==TRUE)&&($piece->square->file>0)&&($piece->square->file<9)){ // Check of promotion can happen except NMZ
+
+				if(($piece->type!=9) && ($canbepromoted==1))
+					$canpromote=$board->checkpromotionparity( $board->export_fen(), $piece,$color_to_move,$board,10);
+				else
+					$canpromote=false;
+					
+				if(($canpromote==TRUE) && ($canbepromoted==1)){// then update the parity with new demoted values
+					$new_move1 = new ChessMove(
+						$piece->square,
+						$piece->square,$piece->square,
+						0,
+						$piece->color,
+						$piece->type,
+						false,
+						$board,
+						$store_board_in_moves,
+						TRUE,$controlled_move,$CommonBorderOpen_Status,null
+						);
+		
+					$move3 = clone $new_move1;
+					$move3-> set_promotion_piece(7);//Knight can become Rook only
+					$moves[] = $move3;
+					}
+			}
+
+
+
 
 				//piece is trapped in palace and has no royal help.
 				if( (($piece->type!=13))&& ((($piece->square->rank==0) || ($piece->square->rank==9)) && (($piece->square->file==4) || ($piece->square->file==5)) )
@@ -7293,7 +7882,8 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 					if($officer_ROYALp==false)
 						return $moves;//
 				}
-
+			}
+			
 			if($board->isCurrentZoneRoyal==true) {$ROYAL_ROYALp=true;$officer_ROYALp=true;$ROYALp=true;}
 		
 			if (($officerp==true) ) {
@@ -7323,7 +7913,33 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 							break;
 						}
 				
-								//Spies/Royals and General is required for killing allowed.. Knight logic and General Logic needs to be corrected
+						$board1= clone $board;
+			
+			
+if($piece->type==8){
+
+	if(($piece->square->rank==8)&&($ending_square->rank==9)&&($spaces==1)&&($board->bbrokencastle==false)&&($piece->type==ChessPiece::GODMAN)){
+		continue;
+	}
+	if(($piece->square->rank==1)&&($ending_square->rank==0)&&($spaces==1)&&($board->wbrokencastle==false)&&($piece->type==ChessPiece::GODMAN)){
+		continue;
+	}
+	if(($piece->square->rank==5)&&($ending_square->rank==4)&&($spaces==1)&&(isset($board->CommonBorderOpen_Status)&&($board->CommonBorderOpen_Status==false))&&($piece->type==ChessPiece::GODMAN)){
+		continue;
+	}
+	if(($piece->square->rank==4)&&($ending_square->rank==5)&&($spaces==1)&&(isset($board->CommonBorderOpen_Status)&&($board->CommonBorderOpen_Status==false))&&($piece->type==ChessPiece::GODMAN)){
+		continue;
+	}
+
+	$new_move = new ChessMove(
+		$piece->square,	$ending_square,$ending_square, 0,$piece->color, $piece->type, false, $board, $store_board_in_moves, FALSE,$controlled_move,$CommonBorderOpen_Status );
+	$moves[] = $new_move;
+	continue;
+}
+			
+			
+			
+						//Spies/Royals and General is required for killing allowed.. Knight logic and General Logic needs to be corrected
 								if((($piece->group=="SOLDIER") || ($piece->group=="OFFICER")) && ($piece->color==1) && ($board->arewcommaderssleeping==true)){
 										$cankill=0;
 									}
@@ -7333,23 +7949,76 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 									}
 
 								/* Check if border breached */
-								$CommonBorderOpen_Status = self::get_CommonBorderOpen_Status(	$piece, $color_to_move, $board,$ending_square );
-								if(($CommonBorderOpen_Status==0)){
-										if (($officer_ROYALp==false) && ($piece->type!=ChessPiece::GODMAN) ){
-												continue;
-										}
-										else if (($officer_ROYALp==true) && ($piece->type!=ChessPiece::GODMAN) ){
-											if ($board->board[$ending_square->rank][$ending_square->file]) {
-												$CommonBorderOpen_Status=1;
-												break;
-											}
-											$CommonBorderOpen_Status=1;}
-										else if (($piece->type==ChessPiece::GODMAN)){
-												$CommonBorderOpen_Status=0;					
-											}
-									}
+
+
+
+								$elavatedstatus=false;
+
+								if (($officer_ROYALp==true)&& ($piece->type!=ChessPiece::GODMAN) )
+									$elavatedstatus=$officer_ROYALp;
+								else if (($GENERALZONEPUSHER==true) && ($piece->type!=ChessPiece::GODMAN) )
+									$elavatedstatus=$GENERALZONEPUSHER;
+								else continue;
+
 	
+								$CommonBorderOpen_Status = self::get_CommonBorderOpen_Status_(	$piece, $color_to_move, $board,$ending_square,$elavatedstatus );
+
+								if(($CommonBorderOpen_Status== 7011) || ($CommonBorderOpen_Status== 7021) || ($CommonBorderOpen_Status== 7015) || ($CommonBorderOpen_Status== 7025) || 
+								($CommonBorderOpen_Status== 7027) || ($CommonBorderOpen_Status== 7017)){continue;}
+
+								else if(($CommonBorderOpen_Status== 9011) || ($CommonBorderOpen_Status== 9021) || ($CommonBorderOpen_Status== 9015) || ($CommonBorderOpen_Status== 9025) || 
+								($CommonBorderOpen_Status== 9027) || ($CommonBorderOpen_Status== 9017)){continue;}
+
+
+
 								/* Check if border breached */	
+
+
+
+//Promotion logic for Pawns only by Generak or Spi
+//
+//
+
+
+$canbepromoted=1;
+if($piece->type==13) {$tempstr="SEMIROYAL";} else {$tempstr="ALL";} 
+
+
+$new_move = new ChessMove(
+	$piece->square,	$ending_square,$ending_square, 0,
+	$piece->color, $piece->type, false, $board, $store_board_in_moves,
+	FALSE,$controlled_move,$CommonBorderOpen_Status );
+
+$skipxy=$piece->square;
+$dROYALp=self::has_ROYAL_neighbours(  self::KING_DIRECTIONS, $skipxy, $ending_square, $color_to_move, $board, $tempstr );
+
+$targetpiece=clone $piece;
+$targetpiece->square->file=	$ending_square->file;
+$targetpiece->square->rank=	$ending_square->rank;
+//endpiece in truce is Palace or surrounding palace the also promotion
+
+if($piece->type==13) {$tempstr="GENERAL";}  
+$dgeneralp=self::has_ROYAL_neighbours(  self::KING_DIRECTIONS, $skipxy, $ending_square, $color_to_move, $board, $tempstr );
+//$dgeneralp=self::check_general_ROYAL_neighbours_promotion( self::KING_DIRECTIONS, $targetpiece, $color_to_move, $board );
+// Check of destination promotion can happen
+if(($canbepromoted==1)&&(($dROYALp==TRUE)||($dgeneralp==TRUE)))
+{ 
+	$canpromote=$board->checkpromotionparity( $board->export_fen(), $piece,$color_to_move,$board,7);
+	if(($canpromote==TRUE)&& ($canbepromoted==1)){// then update the parity with new demoted values
+			$new_move1 = new ChessMove( $piece->square, $ending_square,$ending_square, 0, $piece->color, $piece->type, false, $board, $store_board_in_moves, FALSE,$controlled_move,$CommonBorderOpen_Status );
+			$move3 = clone $new_move1;
+			
+			$move3-> set_promotion_piece(7);
+			$moves[] = $move3;
+	}
+}
+
+//
+//
+//
+
+
+
 
 						$capture = false; $enemypushed=false; $enemytrapped=false;
 						if ($board->board[$ending_square->rank][$ending_square->file]) {
@@ -7493,7 +8162,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 		$ROYAL_ROYALp=self::has_ROYAL_neighbours( self::KING_DIRECTIONS, $piece->square, $piece->square, $color_to_move, $board );
 
 
-
 			//piece is trapped in palace and has no royal help.
 			if(  ((($piece->square->rank==0) || ($piece->square->rank==9)) && (($piece->square->file==4) || ($piece->square->file==5)) )
 			||  ((($piece->square->rank==4) || ($piece->square->rank==5)) && (($piece->square->file==0) || ($piece->square->file==9))  ))
@@ -7513,6 +8181,22 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 				){
 					$board->board[$piece->square->rank] [$piece->square->file]->awake=true;
 				}
+				else if( (($piece->square->rank==0)&&($piece->square->file==4) && ($board->board[0][5]!=null) && ($board->board[0][5]->awake==true) && (($board->board[0][5]->type==ChessPiece::GENERAL)  || ($board->board[0][5]->group=='ROYAL') ||($board->board[0][5]->group=='SEMIROYAL')) ) ||
+				(($piece->square->rank==0)&&($piece->square->file==5) && ($board->board[0][4]!=null) && ($board->board[0][4]->awake==true) && (($board->board[0][4]->type==ChessPiece::GENERAL) || ($board->board[0][4]->group=='ROYAL') ||($board->board[0][4]->group=='SEMIROYAL')) )||
+				(($piece->square->rank==9)&&($piece->square->file==4) && ($board->board[9][5]!=null) && ($board->board[9][5]->awake==true)  && (($board->board[9][5]->type==ChessPiece::GENERAL) || ($board->board[9][5]->group=='ROYAL') ||($board->board[9][5]->group=='SEMIROYAL')) )||
+				(($piece->square->rank==9)&&($piece->square->file==5) && ($board->board[9][4]!=null) && ($board->board[9][4]->awake==true)  && (($board->board[9][4]->type==ChessPiece::GENERAL) || ($board->board[9][4]->group=='ROYAL') ||($board->board[9][4]->group=='SEMIROYAL')) ) ||
+
+				(($piece->square->file==0)&&($piece->square->rank==4) && ($board->board[5][0]!=null) && ($board->board[5][0]->awake==true)  && (($board->board[5][0]->type==ChessPiece::GENERAL) || ($board->board[5][0]->group=='ROYAL') ||($board->board[5][0]->group=='SEMIROYAL')) ) ||
+				(($piece->square->file==0)&&($piece->square->rank==5) && ($board->board[4][0]!=null) && ($board->board[4][0]->awake==true) && (($board->board[4][0]->type==ChessPiece::GENERAL) || ($board->board[4][0]->group=='ROYAL') ||($board->board[4][0]->group=='SEMIROYAL')) )||
+				(($piece->square->file==9)&&($piece->square->rank==4) && ($board->board[5][9]!=null) && ($board->board[5][9]->awake==true) && (($board->board[5][9]->type==ChessPiece::GENERAL) || ($board->board[5][9]->group=='ROYAL') ||($board->board[5][9]->group=='SEMIROYAL')) )||
+				(($piece->square->file==9)&&($piece->square->rank==5) && ($board->board[4][9]!=null) && ($board->board[4][9]->awake==true) && (($board->board[4][9]->type==ChessPiece::GENERAL) || ($board->board[4][9]->group=='ROYAL') ||($board->board[4][9]->group=='SEMIROYAL')) )
+					
+
+				){
+					$board->board[$piece->square->rank] [$piece->square->file]->awake=true;
+					$ROYAL_ROYALp==true;
+				}
+
 				else if(($ROYAL_ROYALp==false))
 				{
 					return $moves;//
@@ -7614,12 +8298,15 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 		if($board->isCurrentZoneRoyal==true) {
 			$ROYAL_ROYALp=true;$officer_ROYALp=true;$ROYALp=true;}
 
+			if((($piece->type==9) ||($piece->group=="ROYAL")||($piece->group=="SEMIROYAL")) && (ROYAL_ROYALp==true)){
+				$ROYAL_ROYALp=true;$officer_ROYALp=true;$ROYALp=true;}
+			
 			
 		/* Start new code added for sleepin p[ieces */
 
 		//Pieces inside CASTLE become Semi-Royal for the time-being.
 		if(((($piece->square->file>=1) &&($piece->square->file<=3)) || (($piece->square->file>=6) &&($piece->square->file<=8)))  && 
-		((($piece->square->rank==0) && ($color_to_move==1)) || ($piece->square->rank==9)  && ($color_to_move==2))){ 
+		((($piece->square->rank==0) && ($color_to_move==1)) || (($piece->square->rank==9)  && ($color_to_move==2)))){ 
 				if($board->isCurrentZoneRoyal==true){
 					$ROYALp=$ROYAL_ROYALp=true;
 				}
@@ -7683,7 +8370,7 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 
 				}
 				else if(($piece->square->rank==6) && ( 
-					(($piece->square->file==0) && ($board->board[5][0]=null))
+					(($piece->square->file==0) && ($board->board[5][0]==null))
 				||(($piece->square->file==9) && ($board->board[5][9]!=null))
 				)){
 
@@ -7788,7 +8475,7 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 
 			}
 			else if(($piece->square->rank==6) && ( 
-				(($piece->square->file==0) && ($board->board[5][0]=null))
+				(($piece->square->file==0) && ($board->board[5][0]==null))
 			||(($piece->square->file==9) && ($board->board[5][9]!=null))
 			)){
 
@@ -7987,6 +8674,8 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 					$tempc=1;
 					$board1= null;
 					for (; $tempc <= $tcount; $tempc++) {
+						//3 6 9 12 13 14 15 16 
+
 						$xdelta=self::OCLOCK_OFFSETS[$oclock][1];
 						$ydelta=self::OCLOCK_OFFSETS[$oclock][0];
 						if(abs($xdelta)==abs($ydelta)){
@@ -8005,11 +8694,31 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 						if ($ending_square) {
 							$capture = false;
 
+							if( (( $piece->square->file==0) && ($ending_square->file>1)) || (( $piece->square->file==9) && ($ending_square->file<8)))
+							{ 
+								continue;
+							}
 
 								//2 steps jump for ROYALs from normal castle not allowed
 								// Check if border breached 
-								$CommonBorderOpen_Status = self::get_CommonBorderOpen_Status(	$piece, $color_to_move, $board,$ending_square );
-								if(($CommonBorderOpen_Status==0)){
+								//$CommonBorderOpen_Status = self::get_CommonBorderOpen_Status(	$piece, $color_to_move, $board,$ending_square );
+								$elavatedstatus=false;
+
+								if (($ROYAL_ROYALp==true) && (strpos($piece->group,"ROYAL")))
+									$elavatedstatus=$ROYAL_ROYALp;
+								else if (($officer_ROYALp==true) && (strpos($piece->group,"ROYAL")===FALSE))
+									$elavatedstatus=$officer_ROYALp;
+
+	
+								$CommonBorderOpen_Status = self::get_CommonBorderOpen_Status_(	$piece, $color_to_move, $board,$ending_square,$elavatedstatus );
+
+								if(($CommonBorderOpen_Status== 7011) || ($CommonBorderOpen_Status== 7021) || ($CommonBorderOpen_Status== 7015) || ($CommonBorderOpen_Status== 7025) || 
+								($CommonBorderOpen_Status== 7027) || ($CommonBorderOpen_Status== 7017)){continue;}
+
+								else if(($CommonBorderOpen_Status== 9011) || ($CommonBorderOpen_Status== 9021) || ($CommonBorderOpen_Status== 9015) || ($CommonBorderOpen_Status== 9025) || 
+								($CommonBorderOpen_Status== 9027) || ($CommonBorderOpen_Status== 9017)){continue;}
+
+								if(($CommonBorderOpen_Status!=0)){
 										if (($ROYAL_ROYALp==false) && (strpos($piece->group,"ROYAL"))){
 												continue;
 										}
@@ -8018,19 +8727,19 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 										}
 										else if (($officer_ROYALp==true) || ($ROYAL_ROYALp==true) ){
 											if ($board->board[$ending_square->rank][$ending_square->file]) {
-												$CommonBorderOpen_Status=1;
 												continue;
 											}
 											
+											/*
 											if (($board->board[$ending_square->rank][$ending_square->file]==null) &&(abs($ending_square->rank-$piece->square->rank)>=1) 
 											&&($ending_square->file!=$piece->square->file)&& ($piece->square->file>0)&&($piece->square->file<9))  {
-												$CommonBorderOpen_Status=1;
 												if( (($ending_square->rank==5)&&($piece->square->rank<5)) || (($ending_square->rank==4)&&($piece->square->rank>4)))
 												{}
 												else
 													continue;
 											}
-											$CommonBorderOpen_Status=1;}
+											*/
+										}
 									}
 
 
@@ -8065,7 +8774,7 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 							if(($ROYALp==true)&&(strpos($piece->group,"ROYAL")!==FALSE)&&((($ending_square->rank==2)&&($piece->square->rank==0))||(($ending_square->rank==7)&&($piece->square->rank==9)))){
 							}
 
-							if(($ROYAL_ROYALp==true)&&(strpos($piece->group,"ROYAL")!==FALSE)&&((($ending_square->file==1)&&($piece->square->file==0))||(($ending_square->file==8)&&($piece->square->file==9))||(($ending_square->file==2)&&($piece->square->file==0))||(($ending_square->file==7)&&($piece->square->file==9)))){
+							if(($ROYAL_ROYALp==true)&&(strpos($piece->group,"ROYAL")!==FALSE)&&(/*(($ending_square->file==1)&&($piece->square->file==0))||(($ending_square->file==8)&&($piece->square->file==9))||*/(($ending_square->file==2)&&($piece->square->file==0))||(($ending_square->file==7)&&($piece->square->file==9)))){
 								continue;//2 steps jump from truce not allowed
 							}
 					
@@ -8106,7 +8815,7 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 							 			((($board->wasquare->file==0)||($board->wasquare->file==9)) &&(($board->wasquare->rank==4)||($board->wasquare->rank==5))) ))
 			 							))
 											{
-											continue;
+											//continue;
 											}
 
 										//Truce Zone guys cannot be killed
@@ -8139,9 +8848,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 							{
 								$board1= clone $board;
 
-								if(($CommonBorderOpen_Status == 1)){
-									$board1->commonborderbreached=true;
-								}
 								$new_move = new ChessMove( $piece->square, $ending_square,$ending_square,1, $piece->color, $piece->type, $capture, $board1, $store_board_in_moves, FALSE,$controlled_move,$CommonBorderOpen_Status,null);
 								$move2 = clone $new_move;
 								//check if the king is killed
@@ -8182,10 +8888,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 							))
 							{
 								$board1= clone $board;
-
-								if(($CommonBorderOpen_Status == 1)){
-									$board1->commonborderbreached=true;
-								}
 
 								$new_move = new ChessMove( $piece->square, $ending_square,$ending_square, 1, $piece->color, $piece->type, $capture, $board1, $store_board_in_moves, FALSE,$controlled_move,$CommonBorderOpen_Status,null );
 								$move2 = clone $new_move;
@@ -8240,10 +8942,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 								//$moves-> set_promotion_piece(2);
 								$board1= clone $board;
 
-								if(($CommonBorderOpen_Status == 1)){
-									$board1->commonborderbreached=true;
-								}
-
 								$new_move = new ChessMove( $piece->square, $ending_square,$ending_square, 1, $piece->color, $piece->type, $capture, $board1, $store_board_in_moves,FALSE,$controlled_move,$CommonBorderOpen_Status,null	);
 	
 								$move2 = clone $new_move;
@@ -8273,9 +8971,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 							)){
 								$board1= clone $board;
 
-								if(($CommonBorderOpen_Status == 1)){
-									$board1->commonborderbreached=true;
-								}
 									$new_move = new ChessMove( $piece->square, $ending_square,$ending_square, 1, $piece->color, $piece->type, $capture, $board1, $store_board_in_moves, FALSE,$controlled_move ,$CommonBorderOpen_Status,null);
 	
 								$move2 = clone $new_move;
@@ -8363,9 +9058,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 									//$moves-> set_promotion_piece(2);
 									$board1= clone $board;
 
-									if(($CommonBorderOpen_Status == 1)){
-										$board1->commonborderbreached=true;
-									}
 									$new_move = new ChessMove( $piece->square, $ending_square,$ending_square,1, $piece->color,$piece->type,	$capture,$board1,$store_board_in_moves,FALSE,$controlled_move,$CommonBorderOpen_Status,null );
 									$move2 = clone $new_move;
 									//check if the king is killed
@@ -8417,10 +9109,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 								{
 									$board1= clone $board;
 
-									if(($CommonBorderOpen_Status == 1)){
-										$board1->commonborderbreached=true;
-									}
-
 									$new_move = new ChessMove($piece->square, $ending_square,$ending_square,1,$piece->color,$piece->type,$capture,$board1,$store_board_in_moves,	FALSE,$controlled_move,$CommonBorderOpen_Status,null);
 									$move3 = clone $new_move;
 									//check if the king is killed
@@ -8440,10 +9128,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 								))
 								{
 									$board1= clone $board;
-
-									if(($CommonBorderOpen_Status == 1)){
-										$board1->commonborderbreached=true;
-									}
 
 									$new_move = new ChessMove($piece->square, $ending_square,$ending_square,1,$piece->color,$piece->type,$capture,$board1,$store_board_in_moves,	FALSE,$controlled_move,$CommonBorderOpen_Status,null);
 									$move3 = clone $new_move;
@@ -8484,9 +9168,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 											{
 												$board1= clone $board;
 
-												if(($CommonBorderOpen_Status == 1)){
-													$board1->commonborderbreached=true;
-												}
 												$new_move = new ChessMove($piece->square, $ending_square, $ending_square, 0, $piece->color, $piece->type, $capture, $board1, $store_board_in_moves,FALSE,$controlled_move,$CommonBorderOpen_Status ,null);
 												$move1 = clone $new_move;
 												//check if the king is killed
@@ -8530,9 +9211,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 												{
 													$board1= clone $board;
 
-													if(($CommonBorderOpen_Status == 1)){
-														$board1->commonborderbreached=true;
-													}
 													$new_move = new ChessMove( $piece->square, $ending_square, $ending_square, 0, $piece->color, $piece->type, $capture,$board1, $store_board_in_moves,FALSE,$controlled_move,$CommonBorderOpen_Status,null );
 													//doublepromotion of spy logic
 													$move1 = clone $new_move;
@@ -8587,9 +9265,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 										if ($board->board[$ending_square->rank][$ending_square->file] ==null) {
 											$board1= clone $board;
 
-											if(($CommonBorderOpen_Status == 1)){
-												$board1->commonborderbreached=true;
-											}
 												$new_move = new ChessMove( $piece->square, $ending_square,$ending_square, 0, $piece->color, $piece->type, $capture, $board1, $store_board_in_moves, FALSE,$controlled_move ,$CommonBorderOpen_Status,null);
 
 												$move2 = clone $new_move;
@@ -8644,9 +9319,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 											else {
 												$board1= clone $board;
 
-												if(($CommonBorderOpen_Status == 1)){
-													$board1->commonborderbreached=true;
-												}
 												$new_move1 = new ChessMove( $piece->square, $ending_square,$ending_square, -1, $piece->color, $piece->type, $capture, $board1, $store_board_in_moves, false,$controlled_move,$CommonBorderOpen_Status);
 												$move2 = clone $new_move1;
 												$moves[] = 	$move2;
@@ -8706,9 +9378,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 											{ 
 												$board1= clone $board;
 
-												if(($CommonBorderOpen_Status == 1)){
-													$board1->commonborderbreached=true;
-												}
 												$new_move = new ChessMove($piece->square, $ending_square,$ending_square, 0, $piece->color, $piece->type, $capture, $board1, $store_board_in_moves, FALSE,$controlled_move,$CommonBorderOpen_Status);
 												$move2 = clone $new_move;
 
@@ -8737,9 +9406,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 											{ 
 												$board1= clone $board;
 
-												if(($CommonBorderOpen_Status == 1)){
-													$board1->commonborderbreached=true;
-												}
 												$new_move = new ChessMove($piece->square, $ending_square,$ending_square, 0, $piece->color, $piece->type, $capture, $board1, $store_board_in_moves, FALSE,$controlled_move,$CommonBorderOpen_Status);
 												$move2 = clone $new_move;
 												$moves[] = $move2;
@@ -8751,10 +9417,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 											((($ending_square->rank==0)||($ending_square->rank==9))) && (($officer_ROYALp==true)&&($board->gametype>=1)) ) ){
 												///	* Classical General can penetrate the CASTLE. //
 												$board1= clone $board;
-
-												if(($CommonBorderOpen_Status == 1)){
-													$board1->commonborderbreached=true;
-												}
 												
 												if(($ending_square->rank==0) && ($piece->color==2)){
 													$board1->wbrokencastle=true;
@@ -8822,9 +9484,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 										{ 
 											$board1= clone $board;
 
-											if(($CommonBorderOpen_Status == 1)){
-												$board1->commonborderbreached=true;
-											}
 											$new_move = new ChessMove($piece->square, $ending_square, $ending_square, 0, $piece->color, $piece->type, $capture, $board1, $store_board_in_moves, FALSE,$controlled_move,$CommonBorderOpen_Status );
 
 											$move2 = clone $new_move;
@@ -8856,9 +9515,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 										//$piece->type=$piece->type+1;
 										$board1= clone $board;
 
-										if(($CommonBorderOpen_Status == 1)){
-											$board1->commonborderbreached=true;
-										}
 										$new_move = new ChessMove($piece->square, $ending_square, $ending_square, 0, $piece->color, $piece->type, $capture, $board1, $store_board_in_moves, FALSE ,$controlled_move,$CommonBorderOpen_Status);
 
 										$move2 = clone $new_move;
@@ -8903,9 +9559,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 											//$piece->type=$piece->type+1;
 											$board1= clone $board;
 
-											if(($CommonBorderOpen_Status == 1)){
-												$board1->commonborderbreached=true;
-											}
 											$new_move = new ChessMove( $piece->square, $ending_square,$ending_square, 0, $piece->color, $piece->type, $capture, $board1, $store_board_in_moves, FALSE ,$controlled_move,$CommonBorderOpen_Status);
 
 											$move2 = clone $new_move;
@@ -8934,9 +9587,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 											//$piece->type=$piece->type+1;
 											$board1= clone $board;
 
-											if(($CommonBorderOpen_Status == 1)){
-												$board1->commonborderbreached=true;
-											}
 											$new_move = new ChessMove( $piece->square, $ending_square,$ending_square, 0, $piece->color, $piece->type, $capture, $board1, $store_board_in_moves, FALSE,$controlled_move ,$CommonBorderOpen_Status);
 
 											$move2 = clone $new_move;
@@ -8961,6 +9611,35 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 								}
 				
 							if(($cankill==0) &&($capture)){ // Knight logic is required to check the surrounding resource from P to S
+
+								{
+									if(($capture==true) && ($ending_square->mediatorrank!=null)&&($ending_square->mediatorfile!=null)){
+										$mediatorpiece = clone $piece;
+										$endpiece = clone $board->board[$ending_square->rank][$ending_square->file];
+
+										if(($piece->square->mediatorrank!=$ending_square->mediatorrank)&&($piece->square->mediatorfile!=$ending_square->mediatorfile)){
+											$mediatorpiece->square->mediatorrank=$ending_square->mediatorrank;
+											$mediatorpiece->square->mediatorfile=$ending_square->mediatorfile;
+											$mediatorpiece->state="V";
+											}
+										$sittingpiece=$board->board[$mediatorpiece->square->rank][$mediatorpiece->square->file];
+										$board1 = clone $board;
+										$board1->board[$mediatorpiece->square->rank][$mediatorpiece->square->file]=$mediatorpiece;
+										if($tempc>=1){
+											$moves = self::add_running_capture_moves_to_moves_list($moves, $mediatorpiece, $endpiece, $color_to_move, $board1, $store_board_in_moves,1,$selfbrokencastle,$foebrokencastle,$CommonBorderOpen_Status);
+											continue;
+										}
+									}
+									else {
+										$board1= clone $board;
+
+										$new_move1 = new ChessMove( $piece->square, $ending_square,$ending_square, -1, $piece->color, $piece->type, $capture, $board1, $store_board_in_moves, false,$controlled_move,$CommonBorderOpen_Status);
+										$move2 = clone $new_move1;
+										$moves[] = 	$move2;
+										}
+									//continue;
+								 }
+
 									continue;
 								}
 
@@ -8987,9 +9666,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 										//$moves-> set_promotion_piece(2);
 										$board1= clone $board;
 
-										if(($CommonBorderOpen_Status == 1)){
-											$board1->commonborderbreached=true;
-										}
 										$new_move = new ChessMove( $piece->square, $ending_square,$ending_square, 1, $piece->color, $piece->type, $capture, $board1, $store_board_in_moves, FALSE,$controlled_move,$CommonBorderOpen_Status );
 										$move2 = clone $new_move;
 										//check if the king is killed
@@ -9018,9 +9694,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 										//$moves-> set_promotion_piece(2);
 										$board1= clone $board;
 
-										if(($CommonBorderOpen_Status == 1)){
-											$board1->commonborderbreached=true;
-										}
 										$new_move = new ChessMove($piece->square, $ending_square,$ending_square, 1, $piece->color, $piece->type, $capture, $board1, $store_board_in_moves, FALSE,$controlled_move ,$CommonBorderOpen_Status);
 
 										$move2 = clone $new_move;
@@ -9054,9 +9727,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 										//$moves-> set_promotion_piece(2);
 										$board1= clone $board;
 
-										if(($CommonBorderOpen_Status == 1)){
-											$board1->commonborderbreached=true;
-										}
 										$new_move = new ChessMove( $piece->square, $ending_square,$ending_square, 1, $piece->color, $piece->type, $capture, $board1, $store_board_in_moves, FALSE,$controlled_move,$CommonBorderOpen_Status );
 
 										$move2 = clone $new_move;
@@ -9073,9 +9743,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 								{
 									$board1= clone $board;
 
-									if(($CommonBorderOpen_Status == 1)){
-										$board1->commonborderbreached=true;
-									}
 										$new_move = new ChessMove( $piece->square, $ending_square,$ending_square, 1, $piece->color, $piece->type, $capture, $board1, $store_board_in_moves, FALSE,$controlled_move,$CommonBorderOpen_Status );
 										$moves[] = $move2;
 										$move3 = clone $new_move;
@@ -9096,9 +9763,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 										//$moves-> set_promotion_piece(2);
 										$board1= clone $board;
 
-										if(($CommonBorderOpen_Status == 1)){
-											$board1->commonborderbreached=true;
-										}
 										$new_move = new ChessMove( $piece->square, $ending_square,$ending_square, 1, $piece->color, $piece->type, $capture, $board1, $store_board_in_moves, FALSE ,$controlled_move,$CommonBorderOpen_Status);
 										if(( $piece->type == ChessPiece::KING)){
 
@@ -9135,28 +9799,13 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 									else {
 										$board1= clone $board;
 
-										if(($CommonBorderOpen_Status == 1)){
-											$board1->commonborderbreached=true;
-
-										}
-
-
-										if (($board->board[$ending_square->rank][$ending_square->file]==null) &&(abs($ending_square->rank-$piece->square->rank)>=1) 
-										&&($ending_square->file!=$piece->square->file)&& ($piece->square->file>0)&&($piece->square->file<9))  {
-											$CommonBorderOpen_Status=1;
-											$board1->CommonBorderOpen_Status=1;
-
-											if( (($ending_square->rank==5)&&($piece->square->rank<5)) || (($ending_square->rank==4)&&($piece->square->rank>4)))
-											{}
-											else
-												continue;
-										}
 
 										$new_move1 = new ChessMove( $piece->square, $ending_square,$ending_square, -1, $piece->color, $piece->type, $capture, $board1, $store_board_in_moves, false,$controlled_move,$CommonBorderOpen_Status);
 										$move2 = clone $new_move1;
 										$moves[] = 	$move2;
 
-										if(($board1->commonborderbreached=true) && ($CommonBorderOpen_Status==1) && (($piece->group=="SOLDIER") ||($piece->group=="OFFICER") || ($piece->group=="NOBLE")))
+										///???
+										if(($board1->commonborderbreached==true) && ($CommonBorderOpen_Status==1) && (($piece->group=="SOLDIER") ||($piece->group=="OFFICER") || ($piece->group=="NOBLE")))
 										    continue;
 
 										}
@@ -9207,7 +9856,7 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 					
 									}
 									else if(($piece->square->rank==6) && ( 
-										(($piece->square->file==0) && ($board->board[5][0]=null))
+										(($piece->square->file==0) && ($board->board[5][0]==null))
 									||(($piece->square->file==9) && ($board->board[5][9]!=null))
 									)){
 					
@@ -9254,9 +9903,6 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 											//Force Promotion to add in movelist	
 											$board1= clone $board;
 
-											if(($CommonBorderOpen_Status == 1)){
-												$board1->commonborderbreached=true;
-											}
 											$new_move1 = new ChessMove( $piece->square, $ending_square,$ending_square, 0, $piece->color, $piece->type, $capture, $board1, $store_board_in_moves, FALSE,$controlled_move,$CommonBorderOpen_Status );
 
 											$move3 = clone $new_move1;
@@ -9355,9 +10001,9 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 			return false;
 		}
 
-		if($board->bnsquare=null)
+		if($board->bnsquare==null)
 			$board->PinnedWRefugees=[];
-		if($board->wnsquare=null)
+		if($board->wnsquare==null)
 			$board->PinnedBRefugees=[];
 
 			for($i=0;$i<8;$i++){
@@ -9736,7 +10382,9 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 							}
 						}
 					//No jumping of TRUCE
-					if(($intermediate_square->rank!=$starting_square->rank) && (($intermediate_square->file==0)||($intermediate_square->file==9))){
+
+
+					if(($board->board[$starting_square->rank] [$starting_square->file]->awake==false)&&($intermediate_square->rank!=$starting_square->rank) && (($intermediate_square->file==0)||($intermediate_square->file==9))){
 						return null;
 					}
 		
@@ -9762,8 +10410,8 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 							}
 						}
 		
-					if ((($intermediate_square->file==0 ) ||($intermediate_square->file==9 )) &&($intermediate_square->rank>=0 )&&($intermediate_square->rank<=9 )) {
-						return null;
+						if  (($board->board[$starting_square->rank] [$starting_square->file]->awake==false) &&(((($intermediate_square->file==0 ) ||($intermediate_square->file==9 )) &&($intermediate_square->rank>=0 )&&($intermediate_square->rank<=9 )))) {
+							return null;
 					}
 		
 					if ( $board->board[$intermediate_square->rank][$intermediate_square->file] ) { //Check Intermediate Block
@@ -9931,7 +10579,7 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 							}
 						}
 		
-					if ((($intermediate_square->file==0 ) ||($intermediate_square->file==9 )) &&($intermediate_square->rank>=0 )&&($intermediate_square->rank<=9 )) {
+					if  (($board->board[$starting_square->rank] [$starting_square->file]->awake==false) &&(((($intermediate_square->file==0 ) ||($intermediate_square->file==9 )) &&($intermediate_square->rank>=0 )&&($intermediate_square->rank<=9 )))) {
 						return null;
 					}
 		
@@ -10098,7 +10746,13 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 				if(($board->board[$intermediate_square->rank][$intermediate_square->file]) &&($cankill==0)){//if intermediate cell also has some data but
 					if ((abs($board->board[$ending_square->rank][$ending_square->file]->color - $color_to_move) ==1)) {//Enemy team-member SPY ARTHSHASTRI
 						if(($board->board[$starting_square->rank][$starting_square->file]->type==ChessPiece::SPY) ||
-						(($board->board[$starting_square->rank][$starting_square->file]->type==ChessPiece::KING) && ($board->board[$intermediate_square->rank][$intermediate_square->file]->type==ChessPiece::GODMAN))){
+						((($board->board[$starting_square->rank][$starting_square->file]->type==ChessPiece::KING) || ($board->board[$starting_square->rank][$starting_square->file]->type==ChessPiece::KING)) && ($board->board[$intermediate_square->rank][$intermediate_square->file]->type==ChessPiece::GODMAN))){
+
+						}
+						else
+						if(( ($board->board[$starting_square->rank][$starting_square->file]->type==ChessPiece::GENERAL) ||($board->board[$starting_square->rank][$starting_square->file]->type==ChessPiece::SPY)||
+						($board->board[$starting_square->rank][$starting_square->file]->type==ChessPiece::KING)||($board->board[$starting_square->rank][$starting_square->file]->type==ChessPiece::INVERTEDKING)) &&
+						((abs($board->board[$intermediate_square->rank][$intermediate_square->file]->color - $color_to_move) ==0)&& ($board->board[$intermediate_square->rank][$intermediate_square->file]->type!=ChessPiece::GODMAN))){
 
 						}
 						else 
@@ -10106,8 +10760,8 @@ static function check_opponent_neighbours(&$board,int $opponent_colors,bool $naa
 						}
 					}
 				}
-
-			if ((($intermediate_square->file==0 ) ||($intermediate_square->file==0 )) &&($intermediate_square->rank>=0 )&&($intermediate_square->rank<=9 )) {
+			if  (($board->board[$starting_square->rank] [$starting_square->file]->awake==false) &&(((($intermediate_square->file==0 ) ||($intermediate_square->file==9 )) &&($intermediate_square->rank>=0 )&&($intermediate_square->rank<=9 )))) {
+			//if ((($intermediate_square->file==0 ) ||($intermediate_square->file==0 )) &&($intermediate_square->rank>=0 )&&($intermediate_square->rank<=9 )) {
 				return null;
 			}
 
